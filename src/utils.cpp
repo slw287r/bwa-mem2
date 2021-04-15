@@ -55,190 +55,190 @@ KSEQ_INIT2(, gzFile, err_gzread)
 
 FILE *err_xopen_core(const char *func, const char *fn, const char *mode)
 {
-	FILE *fp = 0;
-	if (strcmp(fn, "-") == 0)
-		return (strstr(mode, "r"))? stdin : stdout;
-	if ((fp = fopen(fn, mode)) == 0) {
-		err_fatal(func, "fail to open file '%s' : %s", fn, strerror(errno));
-	}
-	return fp;
+    FILE *fp = 0;
+    if (strcmp(fn, "-") == 0)
+        return (strstr(mode, "r"))? stdin : stdout;
+    if ((fp = fopen(fn, mode)) == 0) {
+        err_fatal(func, "fail to open file '%s' : %s", fn, strerror(errno));
+    }
+    return fp;
 }
 
 FILE *err_xreopen_core(const char *func, const char *fn, const char *mode, FILE *fp)
 {
-	if (freopen(fn, mode, fp) == 0) {
-		err_fatal(func, "fail to open file '%s' : %s", fn, strerror(errno));
-	}
-	return fp;
+    if (freopen(fn, mode, fp) == 0) {
+        err_fatal(func, "fail to open file '%s' : %s", fn, strerror(errno));
+    }
+    return fp;
 }
 
 gzFile err_xzopen_core(const char *func, const char *fn, const char *mode)
 {
-	gzFile fp;
-	if (strcmp(fn, "-") == 0) {
-		fp = gzdopen(fileno((strstr(mode, "r"))? stdin : stdout), mode);
-		/* According to zlib.h, this is the only reason gzdopen can fail */
-		if (!fp) err_fatal(func, "Out of memory");
-		return fp;
-	}
-	if ((fp = gzopen(fn, mode)) == 0) {
-		err_fatal(func, "fail to open file '%s' : %s", fn, errno ? strerror(errno) : "Out of memory");
-	}
-	return fp;
+    gzFile fp;
+    if (strcmp(fn, "-") == 0) {
+        fp = gzdopen(fileno((strstr(mode, "r"))? stdin : stdout), mode);
+        /* According to zlib.h, this is the only reason gzdopen can fail */
+        if (!fp) err_fatal(func, "Out of memory");
+        return fp;
+    }
+    if ((fp = gzopen(fn, mode)) == 0) {
+        err_fatal(func, "fail to open file '%s' : %s", fn, errno ? strerror(errno) : "Out of memory");
+    }
+    return fp;
 }
 
 void err_fatal(const char *header, const char *fmt, ...)
 {
-	va_list args;
-	va_start(args, fmt);
-	fprintf(stderr, "[%s] ", header);
-	vfprintf(stderr, fmt, args);
-	fprintf(stderr, "\n");
-	va_end(args);
-	exit(EXIT_FAILURE);
+    va_list args;
+    va_start(args, fmt);
+    fprintf(stderr, "[%s] ", header);
+    vfprintf(stderr, fmt, args);
+    fprintf(stderr, "\n");
+    va_end(args);
+    exit(EXIT_FAILURE);
 }
 
 void err_fatal_core(const char *header, const char *fmt, ...)
 {
-	va_list args;
-	va_start(args, fmt);
-	fprintf(stderr, "[%s] ", header);
-	vfprintf(stderr, fmt, args);
-	fprintf(stderr, " Abort!\n");
-	va_end(args);
-	abort();
+    va_list args;
+    va_start(args, fmt);
+    fprintf(stderr, "[%s] ", header);
+    vfprintf(stderr, fmt, args);
+    fprintf(stderr, " Abort!\n");
+    va_end(args);
+    abort();
 }
 
 void _err_fatal_simple(const char *func, const char *msg)
 {
-	fprintf(stderr, "[%s] %s\n", func, msg);
-	exit(EXIT_FAILURE);
+    fprintf(stderr, "[%s] %s\n", func, msg);
+    exit(EXIT_FAILURE);
 }
 
 void _err_fatal_simple_core(const char *func, const char *msg)
 {
-	fprintf(stderr, "[%s] %s Abort!\n", func, msg);
-	abort();
+    fprintf(stderr, "[%s] %s Abort!\n", func, msg);
+    abort();
 }
 
 size_t err_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
-	size_t ret = fwrite(ptr, size, nmemb, stream);
-	if (ret != nmemb) 
-		_err_fatal_simple("fwrite", strerror(errno));
-	return ret;
+    size_t ret = fwrite(ptr, size, nmemb, stream);
+    if (ret != nmemb) 
+        _err_fatal_simple("fwrite", strerror(errno));
+    return ret;
 }
 
 size_t err_fread_noeof(void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
-	size_t ret = fread(ptr, size, nmemb, stream);
-	if (ret != nmemb)
-	{
-		_err_fatal_simple("fread", ferror(stream) ? strerror(errno) : "Unexpected end of file");
-	}
-	return ret;
+    size_t ret = fread(ptr, size, nmemb, stream);
+    if (ret != nmemb)
+    {
+        _err_fatal_simple("fread", ferror(stream) ? strerror(errno) : "Unexpected end of file");
+    }
+    return ret;
 }
 
 int err_gzread(gzFile file, void *ptr, unsigned int len)
 {
-	int ret = gzread(file, ptr, len);
+    int ret = gzread(file, ptr, len);
 
-	if (ret < 0)
-	{
-		int errnum = 0;
-		const char *msg = gzerror(file, &errnum);
-		_err_fatal_simple("gzread", Z_ERRNO == errnum ? strerror(errno) : msg);
-	}
+    if (ret < 0)
+    {
+        int errnum = 0;
+        const char *msg = gzerror(file, &errnum);
+        _err_fatal_simple("gzread", Z_ERRNO == errnum ? strerror(errno) : msg);
+    }
 
-	return ret;
+    return ret;
 }
 
 int err_fseek(FILE *stream, long offset, int whence)
 {
-	int ret = fseek(stream, offset, whence);
-	if (0 != ret)
-	{
-		_err_fatal_simple("fseek", strerror(errno));
-	}
-	return ret;
+    int ret = fseek(stream, offset, whence);
+    if (0 != ret)
+    {
+        _err_fatal_simple("fseek", strerror(errno));
+    }
+    return ret;
 }
 
 long err_ftell(FILE *stream)
 {
-	long ret = ftell(stream);
-	if (-1 == ret)
-	{
-		_err_fatal_simple("ftell", strerror(errno));
-	}
-	return ret;
+    long ret = ftell(stream);
+    if (-1 == ret)
+    {
+        _err_fatal_simple("ftell", strerror(errno));
+    }
+    return ret;
 }
 
 int err_printf(const char *format, ...) 
 {
-	va_list arg;
-	int done;
-	va_start(arg, format);
-	done = vfprintf(stdout, format, arg);
-	int saveErrno = errno;
-	va_end(arg);
-	if (done < 0) _err_fatal_simple("vfprintf(stdout)", strerror(saveErrno));
-	return done;
+    va_list arg;
+    int done;
+    va_start(arg, format);
+    done = vfprintf(stdout, format, arg);
+    int saveErrno = errno;
+    va_end(arg);
+    if (done < 0) _err_fatal_simple("vfprintf(stdout)", strerror(saveErrno));
+    return done;
 }
 
 int err_fprintf(FILE *stream, const char *format, ...) 
 {
-	va_list arg;
-	int done;
-	va_start(arg, format);
-	done = vfprintf(stream, format, arg);
-	int saveErrno = errno;
-	va_end(arg);
-	if (done < 0) _err_fatal_simple("vfprintf", strerror(saveErrno));
-	return done;
+    va_list arg;
+    int done;
+    va_start(arg, format);
+    done = vfprintf(stream, format, arg);
+    int saveErrno = errno;
+    va_end(arg);
+    if (done < 0) _err_fatal_simple("vfprintf", strerror(saveErrno));
+    return done;
 }
 
 int err_fputc(int c, FILE *stream)
 {
-	int ret = putc(c, stream);
-	if (EOF == ret)
-	{
-		_err_fatal_simple("fputc", strerror(errno));
-	}
+    int ret = putc(c, stream);
+    if (EOF == ret)
+    {
+        _err_fatal_simple("fputc", strerror(errno));
+    }
 
-	return ret;
+    return ret;
 }
 
 char* err_fgets(char *str, int size, FILE *stream)
 {
-	char* ret = fgets(str, size, stream );
-	if (ret == NULL)
-	{
-		_err_fatal_simple("fgets", strerror(errno));
-	}
+    char* ret = fgets(str, size, stream );
+    if (ret == NULL)
+    {
+        _err_fatal_simple("fgets", strerror(errno));
+    }
 
-	return ret;
+    return ret;
 }
 
 int err_fputs(const char *s, FILE *stream)
 {
-	int ret = fputs(s, stream);
-	if (EOF == ret)
-	{
-		_err_fatal_simple("fputs", strerror(errno));
-	}
+    int ret = fputs(s, stream);
+    if (EOF == ret)
+    {
+        _err_fatal_simple("fputs", strerror(errno));
+    }
 
-	return ret;
+    return ret;
 }
 
 int err_puts(const char *s)
 {
-	int ret = puts(s);
-	if (EOF == ret)
-	{
-		_err_fatal_simple("puts", strerror(errno));
-	}
+    int ret = puts(s);
+    if (EOF == ret)
+    {
+        _err_fatal_simple("puts", strerror(errno));
+    }
 
-	return ret;
+    return ret;
 }
 
 int err_fflush(FILE *stream) 
@@ -247,43 +247,43 @@ int err_fflush(FILE *stream)
     if (ret != 0) _err_fatal_simple("fflush", strerror(errno));
 
 #ifdef FSYNC_ON_FLUSH
-	/* Calling fflush() ensures that all the data has made it to the
-	   kernel buffers, but this may not be sufficient for remote filesystems
-	   (e.g. NFS, lustre) as an error may still occur while the kernel
-	   is copying the buffered data to the file server.  To be sure of
-	   catching these errors, we need to call fsync() on the file
-	   descriptor, but only if it is a regular file.  */
-	{
-		struct stat sbuf;
-		if (0 != fstat(fileno(stream), &sbuf))
-			_err_fatal_simple("fstat", strerror(errno));
-		
-		if (S_ISREG(sbuf.st_mode))
-		{
-			if (0 != fsync(fileno(stream)))
-				_err_fatal_simple("fsync", strerror(errno));
-		}
-	}
+    /* Calling fflush() ensures that all the data has made it to the
+       kernel buffers, but this may not be sufficient for remote filesystems
+       (e.g. NFS, lustre) as an error may still occur while the kernel
+       is copying the buffered data to the file server.  To be sure of
+       catching these errors, we need to call fsync() on the file
+       descriptor, but only if it is a regular file.  */
+    {
+        struct stat sbuf;
+        if (0 != fstat(fileno(stream), &sbuf))
+            _err_fatal_simple("fstat", strerror(errno));
+        
+        if (S_ISREG(sbuf.st_mode))
+        {
+            if (0 != fsync(fileno(stream)))
+                _err_fatal_simple("fsync", strerror(errno));
+        }
+    }
 #endif
     return ret;
 }
 
 int err_fclose(FILE *stream) 
 {
-	int ret = fclose(stream);
-	if (ret != 0) _err_fatal_simple("fclose", strerror(errno));
-	return ret;
+    int ret = fclose(stream);
+    if (ret != 0) _err_fatal_simple("fclose", strerror(errno));
+    return ret;
 }
 
 int err_gzclose(gzFile file)
 {
-	int ret = gzclose(file);
-	if (Z_OK != ret)
-	{
-		_err_fatal_simple("gzclose", Z_ERRNO == ret ? strerror(errno) : zError(ret));
-	}
+    int ret = gzclose(file);
+    if (Z_OK != ret)
+    {
+        _err_fatal_simple("gzclose", Z_ERRNO == ret ? strerror(errno) : zError(ret));
+    }
 
-	return ret;
+    return ret;
 }
 
 /*********
@@ -292,15 +292,73 @@ int err_gzclose(gzFile file)
 
 double cputime()
 {
-	struct rusage r;
-	getrusage(RUSAGE_SELF, &r);
-	return r.ru_utime.tv_sec + r.ru_stime.tv_sec + 1e-6 * (r.ru_utime.tv_usec + r.ru_stime.tv_usec);
+    struct rusage r;
+    getrusage(RUSAGE_SELF, &r);
+    return r.ru_utime.tv_sec + r.ru_stime.tv_sec + 1e-6 * (r.ru_utime.tv_usec + r.ru_stime.tv_usec);
 }
 
 double realtime()
 {
-	struct timeval tp;
-	struct timezone tzp;
-	gettimeofday(&tp, &tzp);
-	return tp.tv_sec + tp.tv_usec * 1e-6;
+    struct timeval tp;
+    struct timezone tzp;
+    gettimeofday(&tp, &tzp);
+    return tp.tv_sec + tp.tv_usec * 1e-6;
+}
+/**********
+ * mmap *
+ *********/
+void file_size(const char *fn, int64_t *size)
+{
+    int fd = open(fn, O_RDONLY);
+    xassert(fd > -1, "Cannot open file");
+    struct stat buf;
+    int s = fstat(fd, &buf);
+    xassert(s > -1, "cannot stat file");
+    *size = buf.st_size;
+}
+
+void *mmap_file(const char *fn, int64_t size)
+{
+    int fd = open(fn, O_RDONLY);
+    xassert(fd > -1, "Cannot open file");
+
+    struct stat buf;
+    int s = fstat(fd, &buf);
+    xassert(s > -1, "cannot stat file");
+
+    off_t st_size = buf.st_size;
+    if (size > 0) {
+        xassert(st_size >= size, "bad file size");
+        st_size = size;
+    }
+
+    // mmap flags:
+    // MAP_PRIVATE: copy-on-write mapping. Writes not propagated to file.
+    // MAP_POPULATE: prefault page tables for mapping.  Use read-ahead. Only supported for MAP_PRIVATE
+    // MAP_HUGETLB: use huge pages.  Manual says it's only supported since kernel ver. 2.6.32
+    //              and requires special system configuration.
+    // MAP_NORESERVE: don't reserve swap space
+    // MAP_LOCKED:  Lock the pages of the mapped region into memory in the manner of mlock(2)
+    //              Because we try to lock the pages in memory, this call will fail if the system
+    //              doesn't have sufficient physical memory.  However, without locking, if the
+    //              system can't quite fit the reference the call to mmap will succeed but aligning
+    //              will take forever as parts of the reference are evicted and/or reloaded from disk.
+    int map_flags = MAP_FLAGS;
+    fprintf(stderr, "* mmapping file %s (%0.1fMB)\n", fn, ((double)st_size) / (1024*1024));
+    void* m = mmap(0, st_size, PROT_READ, map_flags, fd, 0);
+    if (m == MAP_FAILED) {
+        perror(__func__);
+        err_fatal("Failed to map %s file to memory\n", fn);
+    }
+    fprintf(stderr, "* File %s locked in memory\n", fn);
+    close(fd);
+    // MADV_WILLNEED:  Expect access in the near future
+    madvise(m, st_size, MADV_WILLNEED);
+    return m;
+}
+
+void unmap_file(void *map, size_t map_size)
+{
+    if (munmap(map, map_size) < 0)
+        perror(__func__);
 }

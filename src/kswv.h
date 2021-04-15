@@ -82,39 +82,39 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 
 typedef struct dnaSeqPair
 {
-	int32_t idr, idq, id;
-	int32_t len1, len2;
-	int32_t h0;
-	int seqid, regid;
-	int score; // best score
-	int te, qe; // target end and query end
-	int score2, te2; // second best score and ending position on the target
-	int tb, qb; // target start and query start
+    int32_t idr, idq, id;
+    int32_t len1, len2;
+    int32_t h0;
+    int seqid, regid;
+    int score; // best score
+    int te, qe; // target end and query end
+    int score2, te2; // second best score and ending position on the target
+    int tb, qb; // target start and query start
 }SeqPair;
 
 typedef struct {
-	int qlen, slen;
-	uint8_t shift, mdiff, max, size;
-	__m128i *qp, *H0, *H1, *E, *Hmax;
+    int qlen, slen;
+    uint8_t shift, mdiff, max, size;
+    __m128i *qp, *H0, *H1, *E, *Hmax;
 } kswq_t;
 
 typedef struct {
-	int score; // best score
-	int te, qe; // target end and query end
-	int score2, te2; // second best score and ending position on the target
-	int tb, qb; // target start and query start
+    int score; // best score
+    int te, qe; // target end and query end
+    int score2, te2; // second best score and ending position on the target
+    int tb, qb; // target start and query start
 } kswr_t;
 
 
 const kswr_t g_defr = { 0, -1, -1, -1, -1, -1, -1 };
 
 #define __max_16(ret, xx) do { \
-		(xx) = _mm_max_epu8((xx), _mm_srli_si128((xx), 8)); \
-		(xx) = _mm_max_epu8((xx), _mm_srli_si128((xx), 4)); \
-		(xx) = _mm_max_epu8((xx), _mm_srli_si128((xx), 2)); \
-		(xx) = _mm_max_epu8((xx), _mm_srli_si128((xx), 1)); \
-    	(ret) = _mm_extract_epi16((xx), 0) & 0x00ff; \
-	} while (0)
+        (xx) = _mm_max_epu8((xx), _mm_srli_si128((xx), 8)); \
+        (xx) = _mm_max_epu8((xx), _mm_srli_si128((xx), 4)); \
+        (xx) = _mm_max_epu8((xx), _mm_srli_si128((xx), 2)); \
+        (xx) = _mm_max_epu8((xx), _mm_srli_si128((xx), 1)); \
+        (ret) = _mm_extract_epi16((xx), 0) & 0x00ff; \
+    } while (0)
 
 #define DP  6
 #define DP1 7
@@ -126,29 +126,29 @@ const kswr_t g_defr = { 0, -1, -1, -1, -1, -1, -1 };
 class kswv {
 public:
 
-	kswv(const int o_del, const int e_del, const int o_ins,
-		 const int e_ins, const int8_t w_match, const int8_t w_mismatch,
-		 int numThreads, int32_t maxRefLen, int32_t maxQerLen);
-	
-	~kswv();
-
-	void getScores8(SeqPair *pairArray,
-					uint8_t *seqBufRef,
-					uint8_t *seqBufQer,
-					kswr_t* aln,
-					int32_t numPairs,
-					uint16_t numThreads,
-					int phase);
-
-	void getScores16(SeqPair *pairArray,
-					 uint8_t *seqBufRef,
-					 uint8_t *seqBufQer,
-					 kswr_t* aln,
-					 int32_t numPairs,
-					 uint16_t numThreads,
-					 int phase);
+    kswv(const int o_del, const int e_del, const int o_ins,
+         const int e_ins, const int8_t w_match, const int8_t w_mismatch,
+         int numThreads, int32_t maxRefLen, int32_t maxQerLen);
     
-	void kswvScalarWrapper(SeqPair *seqPairArray,
+    ~kswv();
+
+    void getScores8(SeqPair *pairArray,
+                    uint8_t *seqBufRef,
+                    uint8_t *seqBufQer,
+                    kswr_t* aln,
+                    int32_t numPairs,
+                    uint16_t numThreads,
+                    int phase);
+
+    void getScores16(SeqPair *pairArray,
+                     uint8_t *seqBufRef,
+                     uint8_t *seqBufQer,
+                     kswr_t* aln,
+                     int32_t numPairs,
+                     uint16_t numThreads,
+                     int phase);
+    
+    void kswvScalarWrapper(SeqPair *seqPairArray,
                            uint8_t *seqBufRef,
                            uint8_t *seqBufQer,
                            kswr_t* aln,
@@ -156,38 +156,38 @@ public:
                            int nthreads,
                            bool sw, int tid);
 
-	kswq_t* ksw_qinit(int size, int qlen, uint8_t *query, int m, const int8_t *mat);
-	
+    kswq_t* ksw_qinit(int size, int qlen, uint8_t *query, int m, const int8_t *mat);
+    
 private:
 #if __AVX512BW__
-	void kswvBatchWrapper8(SeqPair *pairArray,
-						   uint8_t *seqBufRef,
-						   uint8_t *seqBufQer,
-						   kswr_t* aln,
-						   int32_t numPairs,
-						   uint16_t numThreads,
-						   int phase);
+    void kswvBatchWrapper8(SeqPair *pairArray,
+                           uint8_t *seqBufRef,
+                           uint8_t *seqBufQer,
+                           kswr_t* aln,
+                           int32_t numPairs,
+                           uint16_t numThreads,
+                           int phase);
 
-	int kswv512_u8(uint8_t seq1SoA[],
-				   uint8_t seq2SoA[],
-				   int16_t nrow,
-				   int16_t ncol,
-				   SeqPair *p,
-				   kswr_t *aln,
-				   int po_ind,
-				   uint16_t tid,
-				   int32_t numPairs,
-				   int phase);
+    int kswv512_u8(uint8_t seq1SoA[],
+                   uint8_t seq2SoA[],
+                   int16_t nrow,
+                   int16_t ncol,
+                   SeqPair *p,
+                   kswr_t *aln,
+                   int po_ind,
+                   uint16_t tid,
+                   int32_t numPairs,
+                   int phase);
     
-	void kswvBatchWrapper16(SeqPair *pairArray,
-							uint8_t *seqBufRef,
-							uint8_t *seqBufQer,
-							kswr_t* aln,
-							int32_t numPairs,
-							uint16_t numThreads,
-							int phase);
-	
-	int kswv512_16(int16_t seq1SoA[],
+    void kswvBatchWrapper16(SeqPair *pairArray,
+                            uint8_t *seqBufRef,
+                            uint8_t *seqBufQer,
+                            kswr_t* aln,
+                            int32_t numPairs,
+                            uint16_t numThreads,
+                            int phase);
+    
+    int kswv512_16(int16_t seq1SoA[],
                    int16_t seq2SoA[],
                    int16_t nrow,
                    int16_t ncol,
@@ -198,40 +198,40 @@ private:
                    int32_t numPairs,
                    int phase);
 #endif
-	
-	kswr_t kswvScalar_u8(kswq_t *q, int tlen, const uint8_t *target,
-						int _o_del, int _e_del, int _o_ins, int _e_ins,
-						int xtra);  // the first gap costs -(_o+_e)
-	
-	kswr_t kswvScalar_i16(kswq_t *q, int tlen, const uint8_t *target,
-						  int _o_del, int _e_del, int _o_ins, int _e_ins,
-						  int xtra); // the first gap costs -(_o+_e)
-	
-	void bwa_fill_scmat(int8_t mat[25]);
-		
-	int m;
-	int o_del, o_ins, e_del, e_ins;
-	// const int8_t *mat;
+    
+    kswr_t kswvScalar_u8(kswq_t *q, int tlen, const uint8_t *target,
+                        int _o_del, int _e_del, int _o_ins, int _e_ins,
+                        int xtra);  // the first gap costs -(_o+_e)
+    
+    kswr_t kswvScalar_i16(kswq_t *q, int tlen, const uint8_t *target,
+                          int _o_del, int _e_del, int _o_ins, int _e_ins,
+                          int xtra); // the first gap costs -(_o+_e)
+    
+    void bwa_fill_scmat(int8_t mat[25]);
+        
+    int m;
+    int o_del, o_ins, e_del, e_ins;
+    // const int8_t *mat;
 
-	int8_t w_match;
-	int8_t w_mismatch;
-	int8_t w_open;
-	int8_t w_extend;
-	int8_t w_ambig;
-	uint8_t *F8;
-	uint8_t *H8_0, *H8_max, *H8_1;
-	uint8_t *rowMax8;
-	
-	int16_t *F16;
-	int16_t *H16_0, *H16_max, *H16_1;
-	int16_t *rowMax16;
-	int32_t maxRefLen, maxQerLen;
-	
-	int g_qmax;
-	int64_t sort1Ticks;
-	int64_t setupTicks;
-	int64_t swTicks;
-	int64_t sort2Ticks;
+    int8_t w_match;
+    int8_t w_mismatch;
+    int8_t w_open;
+    int8_t w_extend;
+    int8_t w_ambig;
+    uint8_t *F8;
+    uint8_t *H8_0, *H8_max, *H8_1;
+    uint8_t *rowMax8;
+    
+    int16_t *F16;
+    int16_t *H16_0, *H16_max, *H16_1;
+    int16_t *rowMax16;
+    int32_t maxRefLen, maxQerLen;
+    
+    int g_qmax;
+    int64_t sort1Ticks;
+    int64_t setupTicks;
+    int64_t swTicks;
+    int64_t sort2Ticks;
 };
 
 #endif

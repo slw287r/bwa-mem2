@@ -233,7 +233,7 @@ int mem_patch_reg(const mem_opt_t *opt, const bntseq_t *bns, const uint8_t *pac,
 #define MEM_HSP_COEF 1.1f
 #define MEM_MINSC_COEF 5.5f
 #define MEM_SEEDSW_COEF 0.05f
-int stat;
+//int stat;
 
 #if MATE_SORT
 int mem_dedup_patch(const mem_opt_t *opt, const bntseq_t *bns,
@@ -382,7 +382,7 @@ static int test_and_merge(const mem_opt_t *opt, int64_t l_pac, mem_chain_t *c,
             c->m <<= 1;
             if (pm == SEEDS_PER_CHAIN) {  // re-new memory
                 if ((auxSeedBuf = (mem_seed_t *) calloc(c->m, sizeof(mem_seed_t))) == NULL) { fprintf(stderr, "ERROR: out of memory auxSeedBuf\n"); exit(1); }
-                memcpy_bwamem((char*) (auxSeedBuf), c->m * sizeof(mem_seed_t), c->seeds, c->n * sizeof(mem_seed_t), __FILE__, __LINE__);
+                memcpy_bwamem((char*) (auxSeedBuf), c->m * sizeof(mem_seed_t), c->seeds, c->n * sizeof(mem_seed_t), (char *)__FILE__, __LINE__);
                 c->seeds = auxSeedBuf;
                 tprof[PE13][tid]++;
             } else {  // new memory
@@ -1287,7 +1287,7 @@ void mem_process_seqs(mem_opt_t *opt,
     // PAIRED_END
     if (opt->flag & MEM_F_PE) { // infer insert sizes if not provided
         if (pes0)
-            memcpy_bwamem(pes, 4 * sizeof(mem_pestat_t), pes0, 4 * sizeof(mem_pestat_t), __FILE__, __LINE__); // if pes0 != NULL, set the insert-size
+            memcpy_bwamem(pes, 4 * sizeof(mem_pestat_t), pes0, 4 * sizeof(mem_pestat_t), (char *)__FILE__, __LINE__); // if pes0 != NULL, set the insert-size
                                                          // distribution as pes0
         else {
             fprintf(stderr, "[0000] Inferring insert size distribution of PE reads from data, "
@@ -1759,7 +1759,7 @@ void* _mm_realloc(void *ptr, int64_t csize, int64_t nsize, int16_t dsize) {
     }
     void *nptr = _mm_malloc(nsize * dsize, 64);
     assert(nptr != NULL);
-    memcpy_bwamem(nptr, nsize * dsize, ptr, csize, __FILE__, __LINE__);
+    memcpy_bwamem(nptr, nsize * dsize, ptr, csize, (char *)__FILE__, __LINE__);
     _mm_free(ptr);
     
     return nptr;

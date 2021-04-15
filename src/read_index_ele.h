@@ -43,23 +43,31 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #define BWA_IDX_PAC 0x4
 #define BWA_IDX_ALL 0x7
 
+#if defined(__APPLE__)
+    #define MAP_FLAGS MAP_PRIVATE | MAP_NORESERVE
+#else
+    #define MAP_FLAGS MAP_PRIVATE | MAP_POPULATE | MAP_NORESERVE | MAP_LOCKED
+#endif
+
+#define PP fprintf(stderr, "%s\t%d\t<%s>\n", __FILE__, __LINE__, __func__);
+
 typedef struct {
-	bntseq_t *bns; // information on the reference sequences
-	uint8_t  *pac; // the actual 2-bit encoded reference sequences with 'N' converted to a random base
-	int    is_shm;
-	int64_t l_mem;
-	uint8_t  *mem;
+    bntseq_t *bns; // information on the reference sequences
+    uint8_t  *pac; // the actual 2-bit encoded reference sequences with 'N' converted to a random base
+    int    is_shm;
+    int64_t l_mem;
+    uint8_t  *mem;
 } bwaidx_fm_t;
 
 
 class indexEle {
-	
+    
 public:
-	bwaidx_fm_t *idx;
-	
-	indexEle();
-	~indexEle();
-	void bwa_idx_load_ele(const char *hint, int which);
-	char *bwa_idx_infer_prefix(const char *hint);	
+    bwaidx_fm_t *idx;
+    
+    indexEle();
+    ~indexEle();
+    void bwa_idx_load_ele(const char *hint, int which, const int use_mmap);
+    char *bwa_idx_infer_prefix(const char *hint);    
 };
 #endif

@@ -57,7 +57,7 @@ indexEle::~indexEle()
     free(idx);
 }
 
-void indexEle::bwa_idx_load_ele(const char *hint, int which)
+void indexEle::bwa_idx_load_ele(const char *hint, int which, const int use_mmap)
 {
     char *prefix;
     int l_hint = strlen(hint);
@@ -82,11 +82,19 @@ void indexEle::bwa_idx_load_ele(const char *hint, int which)
         
         if (which & BWA_IDX_PAC)
         {
-            idx->pac = (uint8_t*) calloc(idx->bns->l_pac/4+1, 1);
-            assert(idx->pac != NULL);
-            err_fread_noeof(idx->pac, 1, idx->bns->l_pac/4+1, idx->bns->fp_pac); // concatenated 2-bit encoded sequence
-            err_fclose(idx->bns->fp_pac);
-            idx->bns->fp_pac = 0;
+            if (use_mmap)
+            {
+                idx->bns->pac_map = mmap_file(idx->bns->pac_fn, 0);
+                idx->pac = (uint8_t*)idx->bns->pac_map;
+            }
+            else
+            {
+                idx->pac = (uint8_t*) calloc(idx->bns->l_pac/4+1, 1);
+                assert(idx->pac != NULL);
+                FILE *fp_pac = xopen(idx->bns->pac_fn, "rb");
+                err_fread_noeof(idx->pac, 1, idx->bns->l_pac/4+1, fp_pac); // concatenated 2-bit encoded sequence
+                err_fclose(fp_pac);
+            }
         }
     }
     free(prefix);

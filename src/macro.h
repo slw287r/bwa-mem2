@@ -33,11 +33,11 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #include <stdio.h>
 
 #define VER 0
-#define printf_(x,y...)								\
-	{												\
-		if(x)										\
-			fprintf(stderr, y);						\
-	}
+#define printf_(x,y...)                                \
+    {                                                \
+        if(x)                                        \
+            fprintf(stderr, y);                        \
+    }
 
 /* Note: BSW-specific macros are in src/bandedSWA.h file */
 

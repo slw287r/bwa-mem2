@@ -28,6 +28,7 @@ Authors: Sanchit Misra <sanchit.misra@intel.com>; Vasimuddin Md <vasimuddin.md@i
 *****************************************************************************************/
 
 #include <stdio.h>
+#include <stdarg.h>
 #include "sais.h"
 #include "FMI_search.h"
 #include "memcpy_bwamem.h"
@@ -41,7 +42,24 @@ extern "C" {
 }
 #endif
 
-FMI_search::FMI_search(const char *fname)
+void FMI_search::info(const char *format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+}
+
+void FMI_search::error(const char *format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+    exit(EXIT_FAILURE);
+}
+
+FMI_search::FMI_search(const char *fname, int use_mmap)
 {
     fprintf(stderr, "* Entering FMI_search\n");
     //strcpy(file_name, fname);
@@ -53,15 +71,18 @@ FMI_search::FMI_search(const char *fname)
     sa_ms_byte = NULL;
     cp_occ = NULL;
     one_hot_mask_array = NULL;
+    use_mmap = use_mmap;
+    cp_map = NULL;
+    cp_size = 0;
 }
 
 FMI_search::~FMI_search()
 {
-    if(sa_ms_byte)
+    if(sa_ms_byte && !use_mmap)
         _mm_free(sa_ms_byte);
-    if(sa_ls_word)
+    if(sa_ls_word && !use_mmap)
         _mm_free(sa_ls_word);
-    if(cp_occ)
+    if(cp_occ && !use_mmap)
         _mm_free(cp_occ);
     if(one_hot_mask_array)
         _mm_free(one_hot_mask_array);
@@ -69,37 +90,45 @@ FMI_search::~FMI_search()
 
 int64_t FMI_search::pac_seq_len(const char *fn_pac)
 {
-	FILE *fp;
-	int64_t pac_len;
-	uint8_t c;
-	fp = xopen(fn_pac, "rb");
-	err_fseek(fp, -1, SEEK_END);
-	pac_len = err_ftell(fp);
-	err_fread_noeof(&c, 1, 1, fp);
-	err_fclose(fp);
-	return (pac_len - 1) * 4 + (int)c;
+    FILE *fp;
+    int64_t pac_len;
+    uint8_t c;
+    fp = xopen(fn_pac, "rb");
+    err_fseek(fp, -1, SEEK_END);
+    pac_len = err_ftell(fp);
+    err_fread_noeof(&c, 1, 1, fp);
+    err_fclose(fp);
+    return (pac_len - 1) * 4 + (int)c;
 }
 
 void FMI_search::pac2nt(const char *fn_pac, std::string &reference_seq)
 {
-	uint8_t *buf2;
-	int64_t i, pac_size, seq_len;
-	FILE *fp;
+    uint8_t *buf2;
+    int64_t i, pac_size, seq_len;
+    FILE *fp;
 
-	// initialization
-	seq_len = pac_seq_len(fn_pac);
+    // initialization
+    void *pac_map = NULL;
+    seq_len = pac_seq_len(fn_pac);
     assert(seq_len > 0);
     assert(seq_len <= 0x7fffffffffL);
-	fp = xopen(fn_pac, "rb");
-
-	// prepare sequence
-	pac_size = (seq_len>>2) + ((seq_len&3) == 0? 0 : 1);
-	buf2 = (uint8_t*)calloc(pac_size, 1);
-    assert(buf2 != NULL);
-	err_fread_noeof(buf2, 1, pac_size, fp);
-	err_fclose(fp);
-	for (i = 0; i < seq_len; ++i) {
-		int nt = buf2[i>>2] >> ((3 - (i&3)) << 1) & 3;
+    if (use_mmap)
+    {
+        pac_map = mmap_file(fn_pac, 0);
+        buf2 = (uint8_t *)pac_map;
+    }
+    else
+    {
+        fp = xopen(fn_pac, "rb");
+        // prepare sequence
+        pac_size = (seq_len>>2) + ((seq_len&3) == 0? 0 : 1);
+        buf2 = (uint8_t*)calloc(pac_size, 1);
+        assert(buf2 != NULL);
+        err_fread_noeof(buf2, 1, pac_size, fp);
+        err_fclose(fp);
+    }
+    for (i = 0; i < seq_len; ++i) {
+        int nt = buf2[i>>2] >> ((3 - (i&3)) << 1) & 3;
         switch(nt)
         {
             case 0:
@@ -118,7 +147,7 @@ void FMI_search::pac2nt(const char *fn_pac, std::string &reference_seq)
                 fprintf(stderr, "ERROR! Value of nt is not in 0,1,2,3!");
                 exit(EXIT_FAILURE);
         }
-	}
+    }
     for(i = seq_len - 1; i >= 0; i--)
     {
         char c = reference_seq[i];
@@ -138,21 +167,30 @@ void FMI_search::pac2nt(const char *fn_pac, std::string &reference_seq)
             break;
         }
     }
-	free(buf2);
+    if (use_mmap)
+    {
+        file_size(fn_pac, &pac_size);
+        unmap_file(pac_map, pac_size);
+    }
+    else
+        free(buf2);
 }
 
-int FMI_search::build_fm_index(const char *ref_file_name, char *binary_seq, int64_t ref_seq_len, int64_t *sa_bwt, int64_t *count) {
+int FMI_search::build_fm_index(
+        const char *ref_file_name,
+        char *binary_seq,
+        int64_t ref_seq_len,
+        int64_t *sa_bwt,
+        int64_t *count) {
     printf("ref_seq_len = %ld\n", ref_seq_len);
     fflush(stdout);
 
     char outname[PATH_MAX];
-
     strcpy_s(outname, PATH_MAX, ref_file_name);
-    strcat_s(outname, PATH_MAX, CP_FILENAME_SUFFIX);
-    //sprintf(outname, "%s.bwt.2bit.%d", ref_file_name, CP_BLOCK_SIZE);
+    strcat_s(outname, PATH_MAX, CP_FILENAME_SUFFIX); // .bwt.2bit.64
 
-    std::fstream outstream (outname, std::ios::out | std::ios::binary);
-    outstream.seekg(0);	
+    std::fstream outstream(outname, std::ios::out | std::ios::binary);
+    outstream.seekg(0);
 
     printf("count = %ld, %ld, %ld, %ld, %ld\n", count[0], count[1], count[2], count[3], count[4]);
     fflush(stdout);
@@ -164,9 +202,10 @@ int FMI_search::build_fm_index(const char *ref_file_name, char *binary_seq, int6
     outstream.write((char*)count, 5 * sizeof(int64_t));
 
     int64_t i;
+    // CP_BLOCK_SIZE: 64
     int64_t ref_seq_len_aligned = ((ref_seq_len + CP_BLOCK_SIZE - 1) / CP_BLOCK_SIZE) * CP_BLOCK_SIZE;
     int64_t size = ref_seq_len_aligned * sizeof(uint8_t);
-    bwt = (uint8_t *)_mm_malloc(size, 64);
+    bwt = (uint8_t *)_mm_malloc(size, 64); // big
     assert_not_null(bwt, size, index_alloc);
 
     int64_t sentinel_index = -1;
@@ -184,22 +223,21 @@ int FMI_search::build_fm_index(const char *ref_file_name, char *binary_seq, int6
             switch(c)
             {
                 case 0: bwt[i] = 0;
-                          break;
+                    break;
                 case 1: bwt[i] = 1;
-                          break;
+                    break;
                 case 2: bwt[i] = 2;
-                          break;
+                    break;
                 case 3: bwt[i] = 3;
-                          break;
+                    break;
                 default:
-                        fprintf(stderr, "ERROR! i = %ld, c = %c\n", i, c);
-                        exit(EXIT_FAILURE);
+                    fprintf(stderr, "ERROR! i = %ld, c = %c\n", i, c);
+                    exit(EXIT_FAILURE);
             }
         }
     }
     for(i = ref_seq_len; i < ref_seq_len_aligned; i++)
-        bwt[i] = DUMMY_CHAR;
-
+        bwt[i] = DUMMY_CHAR; // 6
 
     printf("CP_SHIFT = %d, CP_MASK = %d\n", CP_SHIFT, CP_MASK);
     printf("sizeof CP_OCC = %ld\n", sizeof(CP_OCC));
@@ -213,7 +251,6 @@ int FMI_search::build_fm_index(const char *ref_file_name, char *binary_seq, int6
     assert_not_null(cp_occ, size, index_alloc);
     memset(cp_occ, 0, cp_occ_size * sizeof(CP_OCC));
     int64_t cp_count[16];
-
     memset(cp_count, 0, 16 * sizeof(int64_t));
     for(i = 0; i < ref_seq_len; i++)
     {
@@ -225,26 +262,21 @@ int FMI_search::build_fm_index(const char *ref_file_name, char *binary_seq, int6
             cpo.cp_count[2] = cp_count[2];
             cpo.cp_count[3] = cp_count[3];
 
-			int32_t j;
+            int32_t j;
             cpo.one_hot_bwt_str[0] = 0;
             cpo.one_hot_bwt_str[1] = 0;
             cpo.one_hot_bwt_str[2] = 0;
             cpo.one_hot_bwt_str[3] = 0;
 
-			for(j = 0; j < CP_BLOCK_SIZE; j++)
-			{
-                cpo.one_hot_bwt_str[0] = cpo.one_hot_bwt_str[0] << 1;
-                cpo.one_hot_bwt_str[1] = cpo.one_hot_bwt_str[1] << 1;
-                cpo.one_hot_bwt_str[2] = cpo.one_hot_bwt_str[2] << 1;
-                cpo.one_hot_bwt_str[3] = cpo.one_hot_bwt_str[3] << 1;
-				uint8_t c = bwt[i + j];
-                //printf("c = %d\n", c);
-                if(c < 4)
-                {
-                    cpo.one_hot_bwt_str[c] += 1;
-                }
-			}
-
+            for(j = 0; j < CP_BLOCK_SIZE; j++)
+            {
+                cpo.one_hot_bwt_str[0] <<= 1;
+                cpo.one_hot_bwt_str[1] <<= 1;
+                cpo.one_hot_bwt_str[2] <<= 1;
+                cpo.one_hot_bwt_str[3] <<= 1;
+                uint8_t c = bwt[i + j];
+                if(c < 4) cpo.one_hot_bwt_str[c]++;
+            }
             cp_occ[i >> CP_SHIFT] = cpo;
         }
         cp_count[bwt[i]]++;
@@ -253,7 +285,7 @@ int FMI_search::build_fm_index(const char *ref_file_name, char *binary_seq, int6
     _mm_free(cp_occ);
     _mm_free(bwt);
 
-    #if SA_COMPRESSION  
+    #if SA_COMPRESSION
 
     size = ((ref_seq_len >> SA_COMPX)+ 1)  * sizeof(uint32_t);
     uint32_t *sa_ls_word = (uint32_t *)_mm_malloc(size, 64);
@@ -274,9 +306,9 @@ int FMI_search::build_fm_index(const char *ref_file_name, char *binary_seq, int6
     fprintf(stderr, "pos: %d, ref_seq_len__: %ld\n", pos, ref_seq_len >> SA_COMPX);
     outstream.write((char*)sa_ms_byte, ((ref_seq_len >> SA_COMPX) + 1) * sizeof(int8_t));
     outstream.write((char*)sa_ls_word, ((ref_seq_len >> SA_COMPX) + 1) * sizeof(uint32_t));
-    
+
     #else
-    
+
     size = ref_seq_len * sizeof(uint32_t);
     uint32_t *sa_ls_word = (uint32_t *)_mm_malloc(size, 64);
     assert_not_null(sa_ls_word, size, index_alloc);
@@ -290,12 +322,12 @@ int FMI_search::build_fm_index(const char *ref_file_name, char *binary_seq, int6
     }
     outstream.write((char*)sa_ms_byte, ref_seq_len * sizeof(int8_t));
     outstream.write((char*)sa_ls_word, ref_seq_len * sizeof(uint32_t));
-    
+
     #endif
 
     outstream.write((char *)(&sentinel_index), 1 * sizeof(int64_t));
     outstream.close();
-    printf("max_occ_ind = %ld\n", i >> CP_SHIFT);    
+    printf("max_occ_ind = %ld\n", i >> CP_SHIFT);
     fflush(stdout);
 
     _mm_free(sa_ms_byte);
@@ -316,7 +348,7 @@ int FMI_search::build_index() {
     strcat_s(pac_file_name, PATH_MAX, ".pac");
     //sprintf(pac_file_name, "%s.pac", prefix);
     pac2nt(pac_file_name, reference_seq);
-	int64_t pac_len = reference_seq.length();
+    int64_t pac_len = reference_seq.length();
     int status;
     int64_t size = pac_len * sizeof(char);
     char *binary_ref_seq = (char *)_mm_malloc(size, 64);
@@ -331,7 +363,7 @@ int FMI_search::build_index() {
     fprintf(stderr, "init ticks = %llu\n", __rdtsc() - startTick);
     startTick = __rdtsc();
     int64_t i, count[16];
-	memset(count, 0, sizeof(int64_t) * 16);
+    memset(count, 0, sizeof(int64_t) * 16);
     for(i = 0; i < pac_len; i++)
     {
         switch(reference_seq[i])
@@ -368,18 +400,26 @@ int FMI_search::build_index() {
     index_alloc += size;
     assert_not_null(suffix_array, size, index_alloc);
     startTick = __rdtsc();
-	//status = saisxx<const char *, int64_t *, int64_t>(reference_seq.c_str(), suffix_array + 1, pac_len, 4);
-	status = saisxx(reference_seq.c_str(), suffix_array + 1, pac_len);
-	suffix_array[0] = pac_len;
+    //status = saisxx<const char *, int64_t *, int64_t>(reference_seq.c_str(), suffix_array + 1, pac_len, 4);
+    status = saisxx(reference_seq.c_str(), suffix_array + 1, pac_len);
+    suffix_array[0] = pac_len;
     fprintf(stderr, "build suffix-array ticks = %llu\n", __rdtsc() - startTick);
     startTick = __rdtsc();
 
-	build_fm_index(prefix, binary_ref_seq, pac_len, suffix_array, count);
+    build_fm_index(prefix, binary_ref_seq, pac_len, suffix_array, count);
     fprintf(stderr, "build fm-index ticks = %llu\n", __rdtsc() - startTick);
     _mm_free(binary_ref_seq);
     _mm_free(suffix_array);
     return 0;
 }
+
+/*
+int64_t bytes2pages(int64_t bytes)
+{
+    int64_t pagesize = sysconf(_SC_PAGESIZE);
+    return (bytes + pagesize - 1) / pagesize;
+}
+*/
 
 void FMI_search::load_index()
 {
@@ -389,55 +429,42 @@ void FMI_search::load_index()
     one_hot_mask_array[1] = base;
     int64_t i = 0;
     for(i = 2; i < 64; i++)
-    {
         one_hot_mask_array[i] = (one_hot_mask_array[i - 1] >> 1) | base;
-    }
 
-    char *ref_file_name = file_name;
+    char *ref_file_name = file_name; // hs37d5.fa
     //beCalls = 0;
     char cp_file_name[PATH_MAX];
     strcpy_s(cp_file_name, PATH_MAX, ref_file_name);
-    strcat_s(cp_file_name, PATH_MAX, CP_FILENAME_SUFFIX);
+    strcat_s(cp_file_name, PATH_MAX, CP_FILENAME_SUFFIX); // hs37d5.fa.bwt.2bit.64
 
     // Read the BWT and FM index of the reference sequence
     FILE *cpstream = NULL;
     cpstream = fopen(cp_file_name,"rb");
     if (cpstream == NULL)
-    {
-        fprintf(stderr, "ERROR! Unable to open the file: %s\n", cp_file_name);
-        exit(EXIT_FAILURE);
-    }
+        error("ERROR! Unable to open the file: %s\n", cp_file_name);
     else
-    {
-        fprintf(stderr, "* Index file found. Loading index from %s\n", cp_file_name);
-    }
+        info("* Index file found. Loading index from %s\n", cp_file_name);
 
     err_fread_noeof(&reference_seq_len, sizeof(int64_t), 1, cpstream);
     assert(reference_seq_len > 0);
     assert(reference_seq_len <= 0x7fffffffffL);
 
-    fprintf(stderr, "* Reference seq len for bi-index = %ld\n", reference_seq_len);
+    info("* Reference seq len for bi-index = %ld\n", reference_seq_len); // 6274909011
 
     // create checkpointed occ
-    int64_t cp_occ_size = (reference_seq_len >> CP_SHIFT) + 1;
+    int64_t cp_occ_size = (reference_seq_len >> CP_SHIFT) + 1; // 64 parts 2^6
     cp_occ = NULL;
 
     err_fread_noeof(&count[0], sizeof(int64_t), 5, cpstream);
-    if ((cp_occ = (CP_OCC *)_mm_malloc(cp_occ_size * sizeof(CP_OCC), 64)) == NULL) {
-        fprintf(stderr, "ERROR! unable to allocated cp_occ memory\n");
-        exit(EXIT_FAILURE);
-    }
-
+    if ((cp_occ = (CP_OCC *)_mm_malloc(cp_occ_size * sizeof(CP_OCC), 64)) == NULL)
+        error("ERROR! unable to allocated cp_occ memory\n");
+    info("size of cp_occ: %lld\n", cp_occ_size * sizeof(CP_OCC)); // 6274909056
     err_fread_noeof(cp_occ, sizeof(CP_OCC), cp_occ_size, cpstream);
-    int64_t ii = 0;
-    for(ii = 0; ii < 5; ii++)// update read count structure
-    {
-        count[ii] = count[ii] + 1;
-    }
-
+    for(i = 0; i < 5; i++)// update read count structure
+        count[i] = count[i] + 1;
     #if SA_COMPRESSION
 
-    int64_t reference_seq_len_ = (reference_seq_len >> SA_COMPX) + 1;
+    int64_t reference_seq_len_ = (reference_seq_len >> SA_COMPX) + 1; // 8 parts 2^3
     sa_ms_byte = (int8_t *)_mm_malloc(reference_seq_len_ * sizeof(int8_t), 64);
     sa_ls_word = (uint32_t *)_mm_malloc(reference_seq_len_ * sizeof(uint32_t), 64);
     err_fread_noeof(sa_ms_byte, sizeof(int8_t), reference_seq_len_, cpstream);
@@ -481,16 +508,109 @@ void FMI_search::load_index()
 
     fprintf(stderr, "* Count:\n");
     for(x = 0; x < 5; x++)
-    {
         fprintf(stderr, "%ld,\t%lu\n", x, (unsigned long)count[x]);
-    }
     fprintf(stderr, "\n");  
 
-    fprintf(stderr, "* Reading other elements of the index from files %s\n",
-            ref_file_name);
-    bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL);
+    fprintf(stderr, "* Reading other elements of the index from files %s\n", ref_file_name);
+    bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 0);
 
     fprintf(stderr, "* Done reading Index!!\n");
+}
+
+void FMI_search::mmap_index()
+{
+    one_hot_mask_array = (uint64_t *)_mm_malloc(64 * sizeof(uint64_t), 64);
+    one_hot_mask_array[0] = 0;
+    uint64_t base = 0x8000000000000000L;
+    one_hot_mask_array[1] = base;
+    int64_t i = 0;
+    for(i = 2; i < 64; i++)
+        one_hot_mask_array[i] = (one_hot_mask_array[i - 1] >> 1) | base;
+
+    char *ref_file_name = file_name; // hs37d5.fa
+    //beCalls = 0;
+    char cp_file_name[PATH_MAX];
+    strcpy_s(cp_file_name, PATH_MAX, ref_file_name);
+    strcat_s(cp_file_name, PATH_MAX, CP_FILENAME_SUFFIX); // hs37d5.fa.bwt.2bit.64
+
+    // Read the BWT and FM index of the reference sequence
+    cp_map = mmap_file(cp_file_name, 0);
+    file_size(cp_file_name, &cp_size);
+    void *p = cp_map;
+
+    memcpy_s(&reference_seq_len, sizeof(int64_t), (int64_t *)p, sizeof(int64_t));
+    assert(reference_seq_len > 0);
+    assert(reference_seq_len <= 0x7fffffffffL);
+    info("* Reference seq len for bi-index = %ld\n", reference_seq_len); // 6274909011
+
+    // create checkpointed occ
+    p = (int64_t *)p + 1;
+    memcpy_s(count, 5 * sizeof(int64_t), p, 5 * sizeof(int64_t));
+    p = (int64_t *)p + 5;
+
+    int64_t cp_occ_size = (reference_seq_len >> CP_SHIFT) + 1; // 64 parts 2^6
+    cp_occ = (CP_OCC *)p;
+    p = (CP_OCC *)p + cp_occ_size;
+    for(i = 0; i < 5; i++)// update read count structure
+        ++count[i];
+    #if SA_COMPRESSION
+
+    int64_t reference_seq_len_ = (reference_seq_len >> SA_COMPX) + 1; // 8 parts 2^3
+    sa_ms_byte = (int8_t *)p;
+    p = (int8_t *)p + reference_seq_len_;
+    sa_ls_word = (uint32_t *)p;
+    p = (uint32_t *)p + reference_seq_len_;
+    
+    #else
+    
+    sa_ms_byte = (int8_t *)p;
+    p = (int8_t *)p + reference_seq_len;
+    sa_ls_word = (uint32_t *)p;
+    p = (uint32_t *)p + reference_seq_len;
+
+    #endif
+
+    sentinel_index = -1;
+    #if SA_COMPRESSION
+    memcpy_s(&sentinel_index, sizeof(int64_t), p, sizeof(int64_t));
+    fprintf(stderr, "* sentinel-index: %ld\n", sentinel_index);
+    #endif
+
+    int64_t x;
+    #if !SA_COMPRESSION
+    for(x = 0; x < reference_seq_len; x++)
+    {
+        // fprintf(stderr, "x: %ld\n", x);
+        #if SA_COMPRESSION
+        if(get_sa_entry_compressed(x) == 0) {
+            sentinel_index = x;
+            break;
+        }
+        #else
+        if(get_sa_entry(x) == 0) {
+            sentinel_index = x;
+            break;
+        }
+        #endif
+    }
+    info("\nsentinel_index: %ld\n", x);    
+    #endif
+
+    info("* Count:\n");
+    for(x = 0; x < 5; x++)
+        info("%ld,\t%lu\n", x, (unsigned long)count[x]);
+    fprintf(stderr, "\n");  
+
+    info("* Reading other elements of the index from files %s\n", ref_file_name);
+    bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 1);
+
+    fprintf(stderr, "* Done reading Index!!\n");
+}
+
+void FMI_search::unmap_index()
+{
+    if (use_mmap)
+        unmap_file(cp_map, cp_size);
 }
 
 void FMI_search::getSMEMsOnePosOneThread(uint8_t *enc_qdb,

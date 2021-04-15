@@ -47,29 +47,29 @@ typedef unsigned char ubyte_t;
 typedef uint64_t bwtint_t;
 
 typedef struct {
-	bwtint_t primary; // S^{-1}(0), or the primary index of BWT
-	bwtint_t L2[5]; // C(), cumulative count
-	bwtint_t seq_len; // sequence length
-	bwtint_t bwt_size; // size of bwt, about seq_len/4
-	uint32_t *bwt; // BWT
-	// occurance array, separated to two parts
-	uint32_t cnt_table[256];
-	// suffix array
-	int sa_intv;
-	bwtint_t n_sa;
-	bwtint_t *sa;
+    bwtint_t primary; // S^{-1}(0), or the primary index of BWT
+    bwtint_t L2[5]; // C(), cumulative count
+    bwtint_t seq_len; // sequence length
+    bwtint_t bwt_size; // size of bwt, about seq_len/4
+    uint32_t *bwt; // BWT
+    // occurance array, separated to two parts
+    uint32_t cnt_table[256];
+    // suffix array
+    int sa_intv;
+    bwtint_t n_sa;
+    bwtint_t *sa;
 } bwt_t;
 
 typedef struct {
-	int count[5];
-	uint32_t *sa;
-	uint32_t *occ;
-	uint32_t sentinel_index;
-	int64_t seq_len;
+    int count[5];
+    uint32_t *sa;
+    uint32_t *occ;
+    uint32_t sentinel_index;
+    int64_t seq_len;
 } bwt2_t;
-	
+    
 typedef struct {
-	bwtint_t x[3], info;
+    bwtint_t x[3], info;
 } bwtintv_t;
 
 typedef struct { size_t n, m; bwtintv_t *a; } bwtintv_v;
@@ -101,7 +101,7 @@ extern "C" {
 
     void bwt_destroy(bwt_t *bwt);
     void bwt_destroy2(bwt2_t *bwt2);
-	
+    
     void bwt_bwtgen(const char *fn_pac, const char *fn_bwt); // from BWT-SW
     void bwt_bwtgen2(const char *fn_pac, const char *fn_bwt, int block_size); // from BWT-SW
     void bwt_cal_sa(bwt_t *bwt, int intv);

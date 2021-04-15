@@ -607,6 +607,7 @@ static void usage(const mem_opt_t *opt)
     fprintf(stderr, "                 specify the mean, standard deviation (10%% of the mean if absent), max\n");
     fprintf(stderr, "                 (4 sigma from the mean if absent) and min of the insert size distribution.\n");
     fprintf(stderr, "                 FR orientation only. [inferred]\n");
+	fprintf(stderr, "   -z            Use MMAP to access reference structures\n");
     fprintf(stderr, "Note: Please read the man page for detailed description of the command line and options.\n");
 }
 
@@ -637,11 +638,12 @@ int main_mem(int argc, char *argv[])
     
     /* Parse input arguments */
     // comment: added option '5' in the list
-    while ((c = getopt(argc, argv, "51qpaMCSPVYjk:c:v:s:r:t:R:A:B:O:E:U:w:L:d:T:Q:D:m:I:N:W:x:G:h:y:K:X:H:o:f:")) >= 0)
+    while ((c = getopt(argc, argv, "51qpaMCSPVYjk:c:v:s:r:t:R:A:B:O:E:U:w:L:d:T:Q:D:m:I:N:W:x:G:h:y:K:X:H:o:f:z")) >= 0)
     {
         if (c == 'k') opt->min_seed_len = atoi(optarg), opt0.min_seed_len = 1;
         else if (c == '1') no_mt_io = 1;
         else if (c == 'x') mode = optarg;
+        else if (c == 'z') opt->use_mmap = 1;
         else if (c == 'w') opt->w = atoi(optarg), opt0.w = 1;
         else if (c == 'A') opt->a = atoi(optarg), opt0.a = 1, assert(opt->a >= INT_MIN && opt->a <= INT_MAX);
         else if (c == 'B') opt->b = atoi(optarg), opt0.b = 1, assert(opt->b >= INT_MIN && opt->b <= INT_MAX);
@@ -845,9 +847,12 @@ int main_mem(int argc, char *argv[])
     /* Load bwt2/FMI index */
     uint64_t tim = __rdtsc();
     
-    fprintf(stderr, "* Ref file: %s\n", argv[optind]);          
-    aux.fmi = new FMI_search(argv[optind]);
-    aux.fmi->load_index();
+    fprintf(stderr, "* Ref file: %s\n", argv[optind]);
+    aux.fmi = new FMI_search(argv[optind], opt->use_mmap);
+    if (opt->use_mmap)
+        aux.fmi->mmap_index();
+    else
+        aux.fmi->load_index();
     tprof[FMI][0] += __rdtsc() - tim;
     
     // reading ref string from the file
@@ -857,44 +862,61 @@ int main_mem(int argc, char *argv[])
     char binary_seq_file[PATH_MAX];
     strcpy_s(binary_seq_file, PATH_MAX, argv[optind]);
     strcat_s(binary_seq_file, PATH_MAX, ".0123");
-    //sprintf(binary_seq_file, "%s.0123", argv[optind]);
     
     fprintf(stderr, "* Binary seq file = %s\n", binary_seq_file);
-    FILE *fr = fopen(binary_seq_file, "r");
-    
-    if (fr == NULL) {
-        fprintf(stderr, "Error: can't open %s input file\n", binary_seq_file);
-        exit(EXIT_FAILURE);
-    }
-    
     int64_t rlen = 0;
-    fseek(fr, 0, SEEK_END); 
-    rlen = ftell(fr);
-    ref_string = (uint8_t*) _mm_malloc(rlen, 64);
-    aux.ref_string = ref_string;
-    rewind(fr);
-    
-    /* Reading ref. sequence */
-    err_fread_noeof(ref_string, 1, rlen, fr);
-    
-    uint64_t timer  = __rdtsc();
-    tprof[REF_IO][0] += timer - tim;
-    
-    fclose(fr);
+    if (aux.opt->use_mmap)
+    {
+        int64_t st_size = 0;
+        file_size(binary_seq_file, &st_size);
+        void* bns_map = mmap_file(binary_seq_file, 0);
+
+        ref_string = (uint8_t*)bns_map;
+        aux.ref_string = ref_string;
+        rlen = st_size;
+        
+        uint64_t timer  = __rdtsc();
+        tprof[REF_IO][0] += timer - tim;
+    }
+    else
+    {
+        FILE *fr = fopen(binary_seq_file, "r");
+
+        if (fr == NULL) {
+            fprintf(stderr, "Error: can't open %s input file\n", binary_seq_file);
+            exit(EXIT_FAILURE);
+        }
+
+        fseek(fr, 0, SEEK_END); 
+        rlen = ftell(fr);
+        ref_string = (uint8_t*) _mm_malloc(rlen, 64);
+        aux.ref_string = ref_string;
+        rewind(fr);
+
+        /* Reading ref. sequence */
+        err_fread_noeof(ref_string, 1, rlen, fr);
+
+        uint64_t timer  = __rdtsc();
+        tprof[REF_IO][0] += timer - tim;
+
+        fclose(fr);
+    }
     fprintf(stderr, "* Reference genome size: %ld bp\n", rlen);
     fprintf(stderr, "* Done reading reference genome !!\n\n");
-    
+
     if (ignore_alt)
         for (i = 0; i < aux.fmi->idx->bns->n_seqs; ++i)
             aux.fmi->idx->bns->anns[i].is_alt = 0;
 
     /* READS file operations */
     ko = kopen(argv[optind + 1], &fd);
-	if (ko == 0) {
-		fprintf(stderr, "[E::%s] fail to open file `%s'.\n", __func__, argv[optind + 1]);
+    if (ko == 0) {
+        fprintf(stderr, "[E::%s] fail to open file `%s'.\n", __func__, argv[optind + 1]);
         free(opt);
         if (is_o) 
             fclose(aux.fp);
+        if (aux.opt->use_mmap)
+            aux.fmi->unmap_index();
         delete aux.fmi;
         kclose(ko);
         return 1;
@@ -921,13 +943,12 @@ int main_mem(int argc, char *argv[])
                 err_gzclose(fp);
                 kseq_destroy(aux.ks);
                 if (is_o) 
-                    fclose(aux.fp);             
+                    fclose(aux.fp);
                 delete aux.fmi;
                 kclose(ko);
                 kclose(ko2);
                 return 1;
-            }            
-            // fp2 = gzopen(argv[optind + 2], "r");
+            }
             fp2 = gzdopen(fd2, "r");
             aux.ks2 = kseq_init(fp2);
             opt->flag |= MEM_F_PE;
@@ -954,7 +975,8 @@ int main_mem(int argc, char *argv[])
 
     // free memory
     int32_t nt = aux.opt->n_threads;
-    _mm_free(ref_string);
+    if (!aux.opt->use_mmap)
+        _mm_free(ref_string);
     free(hdr_line);
     free(opt);
     kseq_destroy(aux.ks);   
@@ -971,7 +993,9 @@ int main_mem(int argc, char *argv[])
     }
 
     // new bwt/FMI
-    delete(aux.fmi);    
+    if (aux.opt->use_mmap)
+        aux.fmi->unmap_index();
+    _mm_free(aux.fmi);
 
     /* Display runtime profiling stats */
     tprof[MEM][0] = __rdtsc() - tprof[MEM][0];
@@ -979,4 +1003,3 @@ int main_mem(int argc, char *argv[])
     
     return 0;
 }
-

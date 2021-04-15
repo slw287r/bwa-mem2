@@ -53,27 +53,26 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 KSEQ_DECLARE(gzFile)
 
 typedef struct {
-	kseq_t *ks, *ks2;
-	mem_opt_t *opt;
-	mem_pestat_t *pes0;
-	int64_t n_processed;
-	int copy_comment;
-	int64_t my_ntasks;
-	int64_t ntasks;
-	int64_t task_size;
-	int64_t actual_chunk_size;
-	FILE *fp;
-	uint8_t *ref_string;
-	FMI_search *fmi;	
+    kseq_t *ks, *ks2;
+    mem_opt_t *opt;
+    mem_pestat_t *pes0;
+    int64_t n_processed;
+    int copy_comment;
+    int64_t my_ntasks;
+    int64_t ntasks;
+    int64_t task_size;
+    int64_t actual_chunk_size;
+    FILE *fp;
+    uint8_t *ref_string;
+    FMI_search *fmi;
 } ktp_aux_t;
 
 typedef struct {
-	ktp_aux_t *aux;
-	int n_seqs;
-	bseq1_t *seqs;
+    ktp_aux_t *aux;
+    int n_seqs;
+    bseq1_t *seqs;
 } ktp_data_t;
 
-    
 void *kopen(const char *fn, int *_fd);
 int kclose(void *a);
 int main_mem(int argc, char *argv[]);

@@ -40,6 +40,7 @@ Authors: Sanchit Misra <sanchit.misra@intel.com>; Vasimuddin Md <vasimuddin.md@i
 
 #include "read_index_ele.h"
 #include "bwa.h"
+#include "utils.h"
 
 #define DUMMY_CHAR 6
 
@@ -55,7 +56,7 @@ typedef struct checkpoint_occ_scalar
 {
     int64_t cp_count[4];
     uint64_t one_hot_bwt_str[4];
-}CP_OCC;
+}CP_OCC; // occurrences of character
 
 #if defined(__clang__) || defined(__GNUC__)
 static inline int _mm_countbits_64(unsigned long x) {
@@ -87,12 +88,14 @@ typedef struct smem_struct
 class FMI_search: public indexEle
 {
     public:
-    FMI_search(const char *fname);
+    FMI_search(const char *fname, int use_mmap);
     ~FMI_search();
     //int64_t beCalls;
     
     int build_index();
     void load_index();
+    void mmap_index();
+    void unmap_index();
 
     void getSMEMs(uint8_t *enc_qdb,
                   int32_t numReads,
@@ -167,6 +170,8 @@ class FMI_search: public indexEle
     int64_t reference_seq_len;
     int64_t sentinel_index;
 private:
+        void info(const char *format, ...);
+        void error(const char *format, ...);
         char file_name[PATH_MAX];
         int64_t index_alloc;
         int64_t count[5];
@@ -185,6 +190,9 @@ private:
                                int64_t *sa_bwt,
                                int64_t *count);
         SMEM backwardExt(SMEM smem, uint8_t a);
+        int use_mmap;
+        void *cp_map;
+        int64_t cp_size;
 };
 
 #endif
