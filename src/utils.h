@@ -34,6 +34,17 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <unistd.h>
+#include <limits.h>
+#include <string.h>
+#include <pwd.h>
+#include <sys/types.h>
+
+#ifdef __linux__
+#include <sys/sysinfo.h>
+#elif defined __APPLE__
+#include <sys/sysctl.h>
+#endif
 
 #if defined(__APPLE__)
     #define MAP_FLAGS MAP_PRIVATE | MAP_NORESERVE
@@ -119,6 +130,9 @@ extern "C" {
     void ks_introsort_64 (size_t n, uint64_t *a);
     void ks_introsort_128(size_t n, pair64_t *a);
     void file_size(const char *fn, int64_t *size);
+	const char *get_username();
+    int64_t get_memory();
+    int64_t max_locked_mem();
     void *mmap_file(const char *fn, int64_t size);
     void unmap_file(void *map, size_t map_size);
 #ifdef __cplusplus

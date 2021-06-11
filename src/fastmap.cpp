@@ -779,7 +779,6 @@ int main_mem(int argc, char *argv[])
             return 1;
         }
     }
-    
     /* Check output file name */
     if (rg_line)
     {
@@ -848,21 +847,39 @@ int main_mem(int argc, char *argv[])
     uint64_t tim = __rdtsc();
     
     fprintf(stderr, "* Ref file: %s\n", argv[optind]);
+    /* check for max locked memory */
+    char *bwt;
+    asprintf(&bwt, "%s.bwt.2bit.64", argv[optind]);
+    int64_t bwt_size;
+    file_size(bwt, &bwt_size);
+    free(bwt);
+    if (bwt_size > max_locked_mem())
+    {
+        if (opt->use_mmap)
+        {
+            fprintf(stderr, "* mmap (-z) is disabled by sysconf..\n");
+            fprintf(stderr, "* To enable it for the current user, add the following two lines to\n");
+            fprintf(stderr, "  /etc/security/limits.conf\n");
+            fprintf(stderr, "  %s  hard  memlock  -1\n", get_username());
+            fprintf(stderr, "  %s  soft  memlock  -1\n", get_username());
+            opt->use_mmap = 0;
+        }
+    }
     aux.fmi = new FMI_search(argv[optind], opt->use_mmap);
     if (opt->use_mmap)
         aux.fmi->mmap_index();
     else
         aux.fmi->load_index();
     tprof[FMI][0] += __rdtsc() - tim;
-    
+
     // reading ref string from the file
     tim = __rdtsc();
     fprintf(stderr, "* Reading reference genome..\n");
-    
+
     char binary_seq_file[PATH_MAX];
     strcpy_s(binary_seq_file, PATH_MAX, argv[optind]);
     strcat_s(binary_seq_file, PATH_MAX, ".0123");
-    
+
     fprintf(stderr, "* Binary seq file = %s\n", binary_seq_file);
     int64_t rlen = 0;
     if (aux.opt->use_mmap)

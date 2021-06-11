@@ -41,6 +41,7 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #include <ctype.h>
 #include <math.h>
 #include <fstream>
+
 #include "bwa.h"
 #include "bwamem.h"
 #include "kthread.h"

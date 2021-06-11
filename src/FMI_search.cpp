@@ -59,7 +59,7 @@ void FMI_search::error(const char *format, ...)
     exit(EXIT_FAILURE);
 }
 
-FMI_search::FMI_search(const char *fname, int use_mmap)
+FMI_search::FMI_search(const char *fname, int _use_mmap)
 {
     fprintf(stderr, "* Entering FMI_search\n");
     //strcpy(file_name, fname);
@@ -71,7 +71,7 @@ FMI_search::FMI_search(const char *fname, int use_mmap)
     sa_ms_byte = NULL;
     cp_occ = NULL;
     one_hot_mask_array = NULL;
-    use_mmap = use_mmap;
+    use_mmap = _use_mmap;
     cp_map = NULL;
     cp_size = 0;
 }
@@ -112,21 +112,13 @@ void FMI_search::pac2nt(const char *fn_pac, std::string &reference_seq)
     seq_len = pac_seq_len(fn_pac);
     assert(seq_len > 0);
     assert(seq_len <= 0x7fffffffffL);
-    if (use_mmap)
-    {
-        pac_map = mmap_file(fn_pac, 0);
-        buf2 = (uint8_t *)pac_map;
-    }
-    else
-    {
-        fp = xopen(fn_pac, "rb");
-        // prepare sequence
-        pac_size = (seq_len>>2) + ((seq_len&3) == 0? 0 : 1);
-        buf2 = (uint8_t*)calloc(pac_size, 1);
-        assert(buf2 != NULL);
-        err_fread_noeof(buf2, 1, pac_size, fp);
-        err_fclose(fp);
-    }
+    fp = xopen(fn_pac, "rb");
+    // prepare sequence
+    pac_size = (seq_len>>2) + ((seq_len&3) == 0? 0 : 1);
+    buf2 = (uint8_t*)calloc(pac_size, 1);
+    assert(buf2 != NULL);
+    err_fread_noeof(buf2, 1, pac_size, fp);
+    err_fclose(fp);
     for (i = 0; i < seq_len; ++i) {
         int nt = buf2[i>>2] >> ((3 - (i&3)) << 1) & 3;
         switch(nt)
@@ -167,13 +159,7 @@ void FMI_search::pac2nt(const char *fn_pac, std::string &reference_seq)
             break;
         }
     }
-    if (use_mmap)
-    {
-        file_size(fn_pac, &pac_size);
-        unmap_file(pac_map, pac_size);
-    }
-    else
-        free(buf2);
+    free(buf2);
 }
 
 int FMI_search::build_fm_index(

@@ -304,9 +304,18 @@ double realtime()
     gettimeofday(&tp, &tzp);
     return tp.tv_sec + tp.tv_usec * 1e-6;
 }
+
 /**********
  * mmap *
  *********/
+const char *get_username()
+{
+    uid_t uid = geteuid();
+    struct passwd *pw = getpwuid(uid);
+    if (pw) return pw->pw_name;
+    return "*";
+}
+
 void file_size(const char *fn, int64_t *size)
 {
     int fd = open(fn, O_RDONLY);
@@ -315,6 +324,35 @@ void file_size(const char *fn, int64_t *size)
     int s = fstat(fd, &buf);
     xassert(s > -1, "cannot stat file");
     *size = buf.st_size;
+}
+
+int64_t get_memory()
+{
+    int64_t mem = 0;
+#ifdef __linux__
+	mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
+#elif defined __APPLE__
+    int64_t len = sizeof(mem);
+    sysctlbyname("hw.memsize", &mem, &len, NULL, 0);
+#endif
+    return mem;
+}
+
+int64_t max_locked_mem()
+{
+	int64_t mlm = 0;
+	char line[LINE_MAX];
+	// max locked memory (kbytes, -l)
+	char cmd[] = "ulimit -l";
+	FILE *fp = popen(cmd, "r");
+	fgets(line, LINE_MAX, fp);
+	line[strchr(line, '\n') - line] = '\0';
+	if (!strncmp(line, "unlimited", strlen("unlimited")))
+		mlm = get_memory();
+	else
+		mlm = strtoul(line, 0, 10) * 1024;
+	pclose(fp);
+	return mlm;
 }
 
 void *mmap_file(const char *fn, int64_t size)

@@ -88,7 +88,7 @@ typedef struct smem_struct
 class FMI_search: public indexEle
 {
     public:
-    FMI_search(const char *fname, int use_mmap);
+    FMI_search(const char *fname, int _use_mmap);
     ~FMI_search();
     //int64_t beCalls;
     
