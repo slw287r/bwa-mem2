@@ -39,6 +39,7 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
+#include <errno.h>
 #include <math.h>
 #include <fstream>
 

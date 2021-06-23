@@ -613,10 +613,10 @@ static void usage(const mem_opt_t *opt)
 
 int main_mem(int argc, char *argv[])
 {
-    int          i, c, ignore_alt = 0, no_mt_io = 0;
-    int          fixed_chunk_size          = -1;
-    char        *p, *rg_line               = 0, *hdr_line = 0;
-    const char  *mode                      = 0;
+    int i, c, ignore_alt = 0, no_mt_io = 0;
+    int fixed_chunk_size = -1;
+    char *p, *rg_line = 0, *hdr_line = 0;
+    const char *mode = 0;
     
     mem_opt_t    *opt, opt0;
     gzFile        fp, fp2 = 0;
@@ -839,7 +839,25 @@ int main_mem(int argc, char *argv[])
             return 1;
         }
     } else update_a(opt, &opt0);
-    
+    // check input reads file
+    if (optind + 2 < argc) {
+        if (access(argv[optind + 1], R_OK)) {
+            errno = ENOENT;
+            fprintf(stderr, "Error accessing input sequence file [%s] %s\n", argv[optind + 1], strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+        if (access(argv[optind + 2], R_OK)) {
+            errno = ENOENT;
+            fprintf(stderr, "Error accessing input sequence file [%s] %s\n", argv[optind + 2], strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+    } else if (optind + 1 < argc) {
+        if (access(argv[optind + 1], R_OK)) {
+            errno = ENOENT;
+            fprintf(stderr, "Error accessing input sequence file [%s] %s\n", argv[optind + 1], strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+    }
     /* Matrix for SWA */
     bwa_fill_scmat(opt->a, opt->b, opt->mat);
     
