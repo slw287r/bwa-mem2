@@ -953,7 +953,7 @@ int main_mem(int argc, char *argv[])
         if (aux.opt->use_mmap)
             aux.fmi->unmap_index();
         delete aux.fmi;
-        kclose(ko);
+        // kclose(ko);
         return 1;
     }
     // fp = gzopen(argv[optind + 1], "r");
@@ -981,7 +981,7 @@ int main_mem(int argc, char *argv[])
                     fclose(aux.fp);
                 delete aux.fmi;
                 kclose(ko);
-                kclose(ko2);
+                // kclose(ko2);
                 return 1;
             }
             fp2 = gzdopen(fd2, "r");
