@@ -43,12 +43,6 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #define BWA_IDX_PAC 0x4
 #define BWA_IDX_ALL 0x7
 
-#if defined(__APPLE__)
-    #define MAP_FLAGS MAP_PRIVATE | MAP_NORESERVE
-#else
-    #define MAP_FLAGS MAP_PRIVATE | MAP_POPULATE | MAP_NORESERVE | MAP_LOCKED
-#endif
-
 #define PP fprintf(stderr, "%s\t%d\t<%s>\n", __FILE__, __LINE__, __func__);
 
 typedef struct {

@@ -55,6 +55,7 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 
 #define MEM_MAPQ_COEF 30.0
 #define MEM_MAPQ_MAX  60
+extern int bwa_verbose;
 
 struct __smem_i;
 typedef struct __smem_i smem_i;

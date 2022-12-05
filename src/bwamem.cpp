@@ -1273,14 +1273,16 @@ void mem_process_seqs(mem_opt_t *opt,
 
     //int n_ = (opt->flag & MEM_F_PE) ? n : n;   // this requires n%2==0
     int n_ = n;
-    
+
     uint64_t tim = __rdtsc();   
-    fprintf(stderr, "[0000] 1. Calling kt_for - worker_bwt\n");
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "[0000] 1. Calling kt_for - worker_bwt\n");
     
     kt_for(worker_bwt, &w, n_); // SMEMs (+SAL)
 
-    fprintf(stderr, "[0000] 2. Calling kt_for - worker_aln\n");
-    
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "[0000] 2. Calling kt_for - worker_aln\n");
+
     kt_for(worker_aln, &w, n_); // BSW
     tprof[WORKER10][0] += __rdtsc() - tim;      
 
@@ -1299,15 +1301,16 @@ void mem_process_seqs(mem_opt_t *opt,
     }
     
     tim = __rdtsc();
-    fprintf(stderr, "[0000] 3. Calling kt_for - worker_sam\n");
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "[0000] 3. Calling kt_for - worker_sam\n");
     
     kt_for(worker_sam, &w,  n_);   // SAM   
     tprof[WORKER20][0] += __rdtsc() - tim;
 
-    fprintf(stderr, "\t[0000][ M::%s] Processed %d reads in %.3f "
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "\t[0000][ M::%s] Processed %d reads in %.3f "
             "CPU sec, %.3f real sec\n",
             __func__, n, cputime() - ctime, realtime() - rtime);
-
 }
 
 static void mem_mark_primary_se_core(const mem_opt_t *opt, int n, mem_alnreg_t *a, int_v *z)

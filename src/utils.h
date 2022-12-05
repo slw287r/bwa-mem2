@@ -46,12 +46,6 @@
 #include <sys/sysctl.h>
 #endif
 
-#if defined(__APPLE__)
-    #define MAP_FLAGS MAP_PRIVATE | MAP_NORESERVE
-#else
-    #define MAP_FLAGS MAP_PRIVATE | MAP_POPULATE | MAP_NORESERVE | MAP_LOCKED
-#endif
-
 #ifdef __GNUC__
 // Tell GCC to validate printf format string and args
 #define ATTRIBUTE(list) __attribute__ (list)
@@ -93,6 +87,7 @@ typedef struct {
 typedef struct { size_t n, m; uint64_t *a; } uint64_v;
 typedef struct { size_t n, m; pair64_t *a; } pair64_v;
 
+extern int bwa_verbose;
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -132,7 +127,6 @@ extern "C" {
     void file_size(const char *fn, int64_t *size);
 	const char *get_username();
     int64_t get_memory();
-    int64_t max_locked_mem();
     void *mmap_file(const char *fn, int64_t size);
     void unmap_file(void *map, size_t map_size);
 #ifdef __cplusplus
