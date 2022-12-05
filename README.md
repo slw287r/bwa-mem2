@@ -4,8 +4,10 @@
 ## About this branch (mmap)
 
 > <a href="https://github.com/bwa-mem2/bwa-mem2/issues/120#issuecomment-821811683">#120</a>
+>
 > I managed to port the mmap feature brought into bwa by Luca Pireddu (https://github.com/ilveroluca/bwa/tree/mmap.rebase) to [bwa-mem2](https://github.com/slw287r/bwa-mem2/tree/mmap) (https://github.com/slw287r/bwa-mem2/tree/mmap).
 > <img src="https://user-images.githubusercontent.com/4134899/115111547-740e7900-9fb3-11eb-87fa-d1717a530b49.png" width="70%">
+>
 > It did lower the ram usage by sharing the index files in cache (16.1G), via the `-z` option:
 
 ```
