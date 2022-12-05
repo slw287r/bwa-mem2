@@ -1,6 +1,20 @@
 [![GitHub Downloads](https://img.shields.io/github/downloads/bwa-mem2/bwa-mem2/total?label=GitHub%20Downloads)](https://github.com/bwa-mem2/bwa-mem2/releases)
 [![BioConda Install](https://img.shields.io/conda/dn/bioconda/bwa-mem2?label=BioConda%20Installs)](https://anaconda.org/bioconda/bwa-mem2)
 
+## About this branch (mmap)
+
+[#120](https://github.com/bwa-mem2/bwa-mem2/issues/120#issuecomment-821811683)
+
+> I managed to port the mmap feature brought into bwa by Luca Pireddu (https://github.com/ilveroluca/bwa/tree/mmap.rebase) to bwa-mem2 (https://github.com/slw287r/bwa-mem2/tree/mmap).
+
+![](https://user-images.githubusercontent.com/4134899/115111547-740e7900-9fb3-11eb-87fa-d1717a530b49.png)
+
+It did lower the ram usage by sharing the index files in cache (16.1G), via the `-z` option:
+
+```
+bwa-mem2 mem -z -t8 <ref.fa> <in.fq.gz> > out.sam
+```
+
 ## Important Information
 
 ***We are happy to announce that the index size on disk is down by 8 times and in memory by 4 times due to moving to only one type of FM-index (2bit.64 instead of 2bit.64 and 8bit.32) and 8x compression of suffix array. For example, for human genome, index size on disk is down to ~10GB from ~80GB and memory footprint is down to ~10GB from ~40GB.***
