@@ -330,7 +330,7 @@ int64_t get_memory()
 {
     int64_t mem = 0;
 #ifdef __linux__
-    mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
+	mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
 #elif defined __APPLE__
     int64_t len = sizeof(mem);
     sysctlbyname("hw.memsize", &mem, &len, NULL, 0);
@@ -340,19 +340,19 @@ int64_t get_memory()
 
 int64_t max_locked_mem()
 {
-    int64_t mlm = 0;
-    char line[LINE_MAX];
-    // max locked memory (kbytes, -l)
-    char cmd[] = "ulimit -l";
-    FILE *fp = popen(cmd, "r");
-    fgets(line, LINE_MAX, fp);
-    line[strchr(line, '\n') - line] = '\0';
-    if (!strncmp(line, "unlimited", strlen("unlimited")))
-        mlm = get_memory();
-    else
-        mlm = strtoul(line, 0, 10) * 1024;
-    pclose(fp);
-    return mlm;
+	int64_t mlm = 0;
+	char line[LINE_MAX];
+	// max locked memory (kbytes, -l)
+	char cmd[] = "ulimit -l";
+	FILE *fp = popen(cmd, "r");
+	fgets(line, LINE_MAX, fp);
+	line[strchr(line, '\n') - line] = '\0';
+	if (!strncmp(line, "unlimited", strlen("unlimited")))
+		mlm = get_memory();
+	else
+		mlm = strtoul(line, 0, 10) * 1024;
+	pclose(fp);
+	return mlm;
 }
 
 void *mmap_file(const char *fn, int64_t size)
@@ -369,27 +369,26 @@ void *mmap_file(const char *fn, int64_t size)
         xassert(st_size >= size, "bad file size");
         st_size = size;
     }
+
     // mmap flags:
-    /* MAP_PRIVATE: copy-on-write mapping. Writes not propagated to file.
-     * MAP_POPULATE: prefault page tables for mapping.  Use read-ahead. Only supported for MAP_PRIVATE
-     * MAP_HUGETLB: use huge pages.  Manual says it's only supported since kernel ver. 2.6.32
-     *              and requires special system configuration.
-     * MAP_NORESERVE: don't reserve swap space
-     * MAP_LOCKED:  Lock the pages of the mapped region into memory in the manner of mlock(2)
-     *              Because we try to lock the pages in memory, this call will fail if the system
-     *              doesn't have sufficient physical memory.  However, without locking, if the
-     *              system can't quite fit the reference the call to mmap will succeed but aligning
-     *              will take forever as parts of the reference are evicted and/or reloaded from disk.
-	 */
-	if (bwa_verbose >= 3)
-		fprintf(stderr, "* mmapping file %s (%0.1fMB)\n", fn, ((double)st_size) / (1024*1024));
-    void* m = mmap(0, st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    // MAP_PRIVATE: copy-on-write mapping. Writes not propagated to file.
+    // MAP_POPULATE: prefault page tables for mapping.  Use read-ahead. Only supported for MAP_PRIVATE
+    // MAP_HUGETLB: use huge pages.  Manual says it's only supported since kernel ver. 2.6.32
+    //              and requires special system configuration.
+    // MAP_NORESERVE: don't reserve swap space
+    // MAP_LOCKED:  Lock the pages of the mapped region into memory in the manner of mlock(2)
+    //              Because we try to lock the pages in memory, this call will fail if the system
+    //              doesn't have sufficient physical memory.  However, without locking, if the
+    //              system can't quite fit the reference the call to mmap will succeed but aligning
+    //              will take forever as parts of the reference are evicted and/or reloaded from disk.
+    int map_flags = MAP_FLAGS;
+    fprintf(stderr, "* mmapping file %s (%0.1fMB)\n", fn, ((double)st_size) / (1024*1024));
+    void* m = mmap(0, st_size, PROT_READ, map_flags, fd, 0);
     if (m == MAP_FAILED) {
         perror(__func__);
-        err_fatal("Failed to map %s file to memory", fn);
+        err_fatal("Failed to map %s file to memory\n", fn);
     }
-    if (st_size < max_locked_mem()) // lock map if applicable
-        mlock(m, st_size);
+    fprintf(stderr, "* File %s locked in memory\n", fn);
     close(fd);
     // MADV_WILLNEED:  Expect access in the near future
     madvise(m, st_size, MADV_WILLNEED);

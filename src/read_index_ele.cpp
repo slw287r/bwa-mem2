@@ -64,9 +64,9 @@ void indexEle::bwa_idx_load_ele(const char *hint, int which, const int use_mmap)
     prefix = (char *) malloc(l_hint + 3 + 4 + 1);
     assert(prefix != NULL);
     strcpy_s(prefix, l_hint + 3 + 4 + 1, hint);
-    if (bwa_verbose >= 3)
-        fprintf(stderr, "* Index prefix: %s\n", prefix);
- 
+
+    fprintf(stderr, "* Index prefix: %s\n", prefix);
+    
     // idx = (bwaidx_fm_t*) calloc(1, sizeof(bwaidx_fm_t));
     if (which & BWA_IDX_BNS) {
         int i, c;
@@ -77,9 +77,9 @@ void indexEle::bwa_idx_load_ele(const char *hint, int which, const int use_mmap)
         }
         for (i = c = 0; i < idx->bns->n_seqs; ++i)
             if (idx->bns->anns[i].is_alt) ++c;
-        if (bwa_verbose >= 3)
-            fprintf(stderr, "* Read %d ALT contigs\n", c);
-
+        
+        fprintf(stderr, "* Read %d ALT contigs\n", c);
+        
         if (which & BWA_IDX_PAC)
         {
             if (use_mmap)

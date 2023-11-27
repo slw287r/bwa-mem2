@@ -81,17 +81,17 @@ int HTStatus()
     if (platform == "GenuineIntel") {
         __cpuid(4, cpuid);
         num_cores = ((cpuid[0] >> 26) & 0x3f) + 1; //A[31:26] + 1
-        if (bwa_verbose >= 3)
-            fprintf(stderr, "Platform vendor: Intel.\n");
+        fprintf(stderr, "Platform vendor: Intel.\n");
     } else  {
-        if (bwa_verbose >= 3)
-            fprintf(stderr, "Platform vendor unknown.\n");
+        fprintf(stderr, "Platform vendor unknown.\n");
     }
+
     // fprintf(stderr, "#physical cpus: ", num_cores);
+
     int ht = platform_features & (1 << 28) && num_cores < num_logical_cpus;
     if (ht)
-        if (bwa_verbose >= 3)
-            fprintf(stderr, "CPUs support hyperThreading!!\n");
+        fprintf(stderr, "CPUs support hyperThreading !!\n");
+
     return ht;
 }
 
@@ -120,10 +120,9 @@ void memoryAlloc(ktp_aux_t *aux, worker_t &w, int32_t nreads, int32_t nthreads)
     int64_t allocMem = memSize * sizeof(mem_alnreg_v) +
         memSize * sizeof(mem_chain_v) +
         sizeof(mem_seed_t) * memSize * AVG_SEEDS_PER_READ;
-    if (bwa_verbose >= 3) {
-        fprintf(stderr, "------------------------------------------\n");
-        fprintf(stderr, "1. Memory pre-allocation for Chaining: %0.4lf MB\n", allocMem/1e6);
-    }
+    fprintf(stderr, "----------------------------------------------------\n");
+    fprintf(stderr, "1. Memory pre-allocation for Chaining: %0.4lf MB\n", allocMem/1e6);
+
     
     /* SWA mem allocation */
     int64_t wsize = BATCH_SIZE * SEEDS_PER_READ;
@@ -146,7 +145,7 @@ void memoryAlloc(ktp_aux_t *aux, worker_t &w, int32_t nreads, int32_t nthreads)
         assert(w.mmc.seqBufRightRef[l*CACHE_LINE] != NULL);
         assert(w.mmc.seqBufRightQer[l*CACHE_LINE] != NULL);
     }
-
+    
     for(int l=0; l<nthreads; l++) {
         w.mmc.seqPairArrayAux[l]      = (SeqPair *) malloc((wsize + MAX_LINE_LEN)* sizeof(SeqPair));
         w.mmc.seqPairArrayLeft128[l]  = (SeqPair *) malloc((wsize + MAX_LINE_LEN)* sizeof(SeqPair));
@@ -158,11 +157,11 @@ void memoryAlloc(ktp_aux_t *aux, worker_t &w, int32_t nreads, int32_t nthreads)
         assert(w.mmc.seqPairArrayRight128[l] != NULL);
     }   
 
+
     allocMem = (wsize * MAX_SEQ_LEN_REF * sizeof(int8_t) + MAX_LINE_LEN) * opt->n_threads * 2+
         (wsize * MAX_SEQ_LEN_QER * sizeof(int8_t) + MAX_LINE_LEN) * opt->n_threads  * 2 +       
         wsize * sizeof(SeqPair) * opt->n_threads * 3;   
-    if (bwa_verbose >= 3)
-        fprintf(stderr, "2. Memory pre-allocation for BSW: %0.4lf MB\n", allocMem/1e6);
+    fprintf(stderr, "2. Memory pre-allocation for BSW: %0.4lf MB\n", allocMem/1e6);
 
     for (int l=0; l<nthreads; l++)
     {
@@ -180,13 +179,9 @@ void memoryAlloc(ktp_aux_t *aux, worker_t &w, int32_t nreads, int32_t nthreads)
         nthreads * BATCH_MUL * BATCH_SIZE * readLen *sizeof(int16_t) +
         nthreads * BATCH_MUL * BATCH_SIZE * readLen *sizeof(int32_t) +
         nthreads * (BATCH_SIZE + 32) * sizeof(int32_t);
-
-    if (bwa_verbose >= 3) {
-        fprintf(stderr, "3. Memory pre-allocation for BWT: %0.4lf MB\n", allocMem/1e6);
-        fprintf(stderr, "------------------------------------------\n");
-    }
+    fprintf(stderr, "3. Memory pre-allocation for BWT: %0.4lf MB\n", allocMem/1e6);
+    fprintf(stderr, "----------------------------------------------------\n");
 }
-
 ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, worker_t &w)
 {
     ktp_aux_t *aux = (ktp_aux_t*) shared;
@@ -204,9 +199,10 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
                                    &ret->n_seqs,
                                    aux->ks, aux->ks2,
                                    &sz);
+
         tprof[READ_IO][0] += __rdtsc() - tim;
-        if (bwa_verbose >= 3)
-            fprintf(stderr, "[0000] read_chunk: %ld, work_chunk_size: %ld, nseq: %d\n",
+        
+        fprintf(stderr, "[0000] read_chunk: %ld, work_chunk_size: %ld, nseq: %d\n",
                 aux->task_size, sz, ret->n_seqs);   
 
         if (ret->seqs == 0) {
@@ -223,28 +219,27 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
             int64_t size = 0;
             for (int i = 0; i < ret->n_seqs; ++i) size += ret->seqs[i].l_seq;
 
-            if (bwa_verbose >= 3)
-                fprintf(stderr, "\t[0000][ M::%s] read %d sequences (%ld bp)...\n",
+            fprintf(stderr, "\t[0000][ M::%s] read %d sequences (%ld bp)...\n",
                     __func__, ret->n_seqs, (long)size);
         }
+                
         return ret;
-    } // Step 0
+    } // Step 0         
     else if (step == 1)  /* Step 2: Main processing-engine */
     {
         static int task = 0;
         if (w.nreads < ret->n_seqs)
         {
-            if (bwa_verbose >= 3)
-                fprintf(stderr, "[0000] Reallocating initial memory allocations!!\n");
+            fprintf(stderr, "[0000] Reallocating initial memory allocations!!\n");
             free(w.regs); free(w.chain_ar); free(w.seedBuf);
             w.nreads = ret->n_seqs;
             w.regs = (mem_alnreg_v *) calloc(w.nreads, sizeof(mem_alnreg_v));
             w.chain_ar = (mem_chain_v*) malloc (w.nreads * sizeof(mem_chain_v));
             w.seedBuf = (mem_seed_t *) calloc(sizeof(mem_seed_t), w.nreads * AVG_SEEDS_PER_READ);
             assert(w.regs != NULL); assert(w.chain_ar != NULL); assert(w.seedBuf != NULL);
-        }
-        if (bwa_verbose >= 3)
-            fprintf(stderr, "[0000] Calling mem_process_seqs.., task: %d\n", task++);
+        }       
+                                
+        fprintf(stderr, "[0000] Calling mem_process_seqs.., task: %d\n", task++);
 
         uint64_t tim = __rdtsc();
         if (opt->flag & MEM_F_SMARTPE)
@@ -254,10 +249,10 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
             mem_opt_t tmp_opt = *opt;
 
             bseq_classify(ret->n_seqs, ret->seqs, n_sep, sep);
-            if (bwa_verbose >= 3)
-                fprintf(stderr, "[M::%s] %d single-end sequences; %d paired-end sequences.....\n",
-                    __func__, n_sep[0], n_sep[1]);
 
+            fprintf(stderr, "[M::%s] %d single-end sequences; %d paired-end sequences.....\n",
+                    __func__, n_sep[0], n_sep[1]);
+            
             if (n_sep[0]) {
                 tmp_opt.flag &= ~MEM_F_PE;
                 /* single-end sequences, in the mixture */
@@ -324,7 +319,6 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
     
     return 0;
 }
-
 static void *ktp_worker(void *data)
 {   
     ktp_worker_t *w = (ktp_worker_t*) data;
@@ -379,14 +373,12 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
     int tc = numa_num_task_cpus();
     int tn = numa_num_task_nodes();
     int tcc = numa_num_configured_cpus();
-    if (bwa_verbose >= 3)
-        fprintf(stderr, "num_cpus: %d, num_numas: %d, configured cpus: %d\n", tc, tn, tcc);
+    fprintf(stderr, "num_cpus: %d, num_numas: %d, configured cpus: %d\n", tc, tn, tcc);
     int ht = HTStatus();
     if (ht) deno = 2;
-
+    
     if (nthreads < tcc/tn/deno) {
-        if (bwa_verbose >= 2)
-            fprintf(stderr, "Enabling single numa domain...\n\n");
+        fprintf(stderr, "Enabling single numa domain...\n\n");
         // numa_set_preferred(0);
         // bitmask mask(0);
         struct bitmask *mask = numa_bitmask_alloc(numa_num_possible_nodes());
@@ -410,10 +402,9 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
         int num_ht = cpuid[1] & 0xFFFF;
         int num_total_logical_cpus = get_nprocs_conf();
         int num_sockets = num_total_logical_cpus / num_logical_cpus;
-        if (bwa_verbose >= 3)
-            fprintf(stderr, "#sockets: %d, #cores/socket: %d, #logical_cpus: %d, #ht/core: %d\n",
+        fprintf(stderr, "#sockets: %d, #cores/socket: %d, #logical_cpus: %d, #ht/core: %d\n",
                 num_sockets, num_logical_cpus/num_ht, num_total_logical_cpus, num_ht);
-
+        
         for (int i=0; i<num_total_logical_cpus; i++) affy[i] = i;
         int slookup[256] = {-1};
 
@@ -459,14 +450,13 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
         }
     }
 #endif
-
+    
     int32_t nreads = aux->actual_chunk_size/ READ_LEN + 10;
-
+    
     /* All memory allocation */
     memoryAlloc(aux, w, nreads, nthreads);
-    if (bwa_verbose >= 3)
-        fprintf(stderr, "* Threads used (compute): %d\n", nthreads);
-
+    fprintf(stderr, "* Threads used (compute): %d\n", nthreads);
+    
     /* pipeline using pthreads */
     ktp_t aux_;
     int p_nt = pipe_threads; // 2;
@@ -486,8 +476,7 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
     pthread_ret = pthread_cond_init(&aux_.cv, 0);
     assert(pthread_ret == 0);
 
-    if (bwa_verbose >= 3)
-        fprintf(stderr, "* No. of pipeline threads: %d\n\n", p_nt);
+    fprintf(stderr, "* No. of pipeline threads: %d\n\n", p_nt);
     aux_.workers = (ktp_worker_t*) malloc(p_nt * sizeof(ktp_worker_t));
     assert(aux_.workers != NULL);
     
@@ -517,14 +506,14 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
     free(ptid);
     free(aux_.workers);
     /***** pipeline ends ******/
-    if (bwa_verbose >= 3)
-        fprintf(stderr, "[0000] Computation ends..\n");
-
+    
+    fprintf(stderr, "[0000] Computation ends..\n");
+    
     /* Dealloc memory allcoated in the header section */    
     free(w.chain_ar);
     free(w.regs);
     free(w.seedBuf);
-
+    
     for(int l=0; l<nthreads; l++) {
         _mm_free(w.mmc.seqBufLeftRef[l*CACHE_LINE]);
         _mm_free(w.mmc.seqBufRightRef[l*CACHE_LINE]);
@@ -616,7 +605,7 @@ static void usage(const mem_opt_t *opt)
     fprintf(stderr, "                 specify the mean, standard deviation (10%% of the mean if absent), max\n");
     fprintf(stderr, "                 (4 sigma from the mean if absent) and min of the insert size distribution.\n");
     fprintf(stderr, "                 FR orientation only. [inferred]\n");
-    fprintf(stderr, "   -z            Use MMAP to access reference structures\n");
+	fprintf(stderr, "   -z            Use MMAP to access reference structures\n");
     fprintf(stderr, "Note: Please read the man page for detailed description of the command line and options.\n");
 }
 
@@ -807,8 +796,7 @@ int main_mem(int argc, char *argv[])
     /* Further input parsing */
     if (mode)
     {
-        if (bwa_verbose >= 2)
-            fprintf(stderr, "WARNING: bwa-mem2 doesn't work well with long reads or contigs; please use minimap2 instead.\n");
+        fprintf(stderr, "WARNING: bwa-mem2 doesn't work well with long reads or contigs; please use minimap2 instead.\n");
         if (strcmp(mode, "intractg") == 0)
         {
             if (!opt0.o_del) opt->o_del = 16;
@@ -873,8 +861,28 @@ int main_mem(int argc, char *argv[])
     
     /* Load bwt2/FMI index */
     uint64_t tim = __rdtsc();
-    if (bwa_verbose >= 3)
-		fprintf(stderr, "* Ref file: %s\n", argv[optind]);
+    
+    fprintf(stderr, "* Ref file: %s\n", argv[optind]);
+    /* check for max locked memory */
+    char *bwt;
+    asprintf(&bwt, "%s.bwt.2bit.64", argv[optind]);
+    int64_t bwt_size;
+    file_size(bwt, &bwt_size);
+    free(bwt);
+	/*
+    if (bwt_size > max_locked_mem())
+    {
+        if (opt->use_mmap)
+        {
+            fprintf(stderr, "* mmap (-z) is disabled by sysconf..\n");
+            fprintf(stderr, "* To enable it for the current user, add the following two lines to\n");
+            fprintf(stderr, "  /etc/security/limits.conf\n");
+            fprintf(stderr, "  %s  hard  memlock  -1\n", get_username());
+            fprintf(stderr, "  %s  soft  memlock  -1\n", get_username());
+            opt->use_mmap = 0;
+        }
+    }
+	*/
     aux.fmi = new FMI_search(argv[optind], opt->use_mmap);
     if (opt->use_mmap)
         aux.fmi->mmap_index();
@@ -884,15 +892,13 @@ int main_mem(int argc, char *argv[])
 
     // reading ref string from the file
     tim = __rdtsc();
-    if (bwa_verbose >= 3)
-        fprintf(stderr, "* Reading reference genome..\n");
+    fprintf(stderr, "* Reading reference genome..\n");
 
     char binary_seq_file[PATH_MAX];
     strcpy_s(binary_seq_file, PATH_MAX, argv[optind]);
     strcat_s(binary_seq_file, PATH_MAX, ".0123");
 
-    if (bwa_verbose >= 3)
-        fprintf(stderr, "* Binary seq file = %s\n", binary_seq_file);
+    fprintf(stderr, "* Binary seq file = %s\n", binary_seq_file);
     int64_t rlen = 0;
     if (aux.opt->use_mmap)
     {
@@ -930,11 +936,8 @@ int main_mem(int argc, char *argv[])
 
         fclose(fr);
     }
-    if (bwa_verbose >= 3)
-    {
-        fprintf(stderr, "* Reference genome size: %ld bp\n", rlen);
-        fprintf(stderr, "* Done reading reference genome !!\n\n");
-    }
+    fprintf(stderr, "* Reference genome size: %ld bp\n", rlen);
+    fprintf(stderr, "* Done reading reference genome!!\n\n");
 
     if (ignore_alt)
         for (i = 0; i < aux.fmi->idx->bns->n_seqs; ++i)
@@ -1002,7 +1005,7 @@ int main_mem(int argc, char *argv[])
 
     /* Relay process function */
     process(&aux, fp, fp2, no_mt_io? 1:2);
-
+    
     tprof[PROCESS][0] += __rdtsc() - tim;
 
     // free memory
@@ -1031,8 +1034,7 @@ int main_mem(int argc, char *argv[])
 
     /* Display runtime profiling stats */
     tprof[MEM][0] = __rdtsc() - tprof[MEM][0];
-    if (bwa_verbose >= 3)
-        display_stats(nt);
- 
+    //display_stats(nt);
+    
     return 0;
 }

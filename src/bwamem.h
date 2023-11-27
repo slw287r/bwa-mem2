@@ -55,7 +55,6 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 
 #define MEM_MAPQ_COEF 30.0
 #define MEM_MAPQ_MAX  60
-extern int bwa_verbose;
 
 struct __smem_i;
 typedef struct __smem_i smem_i;
@@ -144,6 +143,7 @@ typedef struct mem_alnreg_t {
     mem_chain_t *c;
     int score;      // best local SW score
     int truesc;     // actual score corresponding to the aligned region; possibly smaller than $score
+    int gscore;     // score + truesc
     int sub;        // 2nd best SW score
     int alt_sc;
     int csub;       // SW score of a tandem hit

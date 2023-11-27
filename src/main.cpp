@@ -32,7 +32,7 @@ Contacts: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@
 #include "main.h"
 
 #ifndef PACKAGE_VERSION
-#define PACKAGE_VERSION "2.2.1a"
+#define PACKAGE_VERSION "2.2.1b"
 #endif
 
 
@@ -52,7 +52,6 @@ int usage()
 
 int main(int argc, char* argv[])
 {
-        
     // ---------------------------------    
     uint64_t tim = __rdtsc();
     sleep(1);
@@ -73,26 +72,25 @@ int main(int argc, char* argv[])
         tprof[MEM][0] = __rdtsc();
         kstring_t pg = {0,0,0};
         extern char *bwa_pg;
-/*
-            fprintf(stderr, "-----------------------------\n");
+
+        fprintf(stderr, "-----------------------------\n");
 #if __AVX512BW__
-            fprintf(stderr, "Executing in AVX512 mode!!\n");
+        fprintf(stderr, "Executing in AVX512 mode!!\n");
 #elif __AVX2__
-            fprintf(stderr, "Executing in AVX2 mode!!\n");
+        fprintf(stderr, "Executing in AVX2 mode!!\n");
 #elif __AVX__
-            fprintf(stderr, "Executing in AVX mode!!\n");        
+        fprintf(stderr, "Executing in AVX mode!!\n");        
 #elif __SSE4_2__
-            fprintf(stderr, "Executing in SSE4.2 mode!!\n");
+        fprintf(stderr, "Executing in SSE4.2 mode!!\n");
 #elif __SSE4_1__
-            fprintf(stderr, "Executing in SSE4.1 mode!!\n");        
+        fprintf(stderr, "Executing in SSE4.1 mode!!\n");        
 #endif
-            fprintf(stderr, "-----------------------------\n");
-*/
-/*
+        fprintf(stderr, "-----------------------------\n");
+
         #if SA_COMPRESSION
         fprintf(stderr, "* SA compression enabled with xfactor: %d\n", 0x1 << SA_COMPX);
         #endif
- */
+        
         ksprintf(&pg, "@PG\tID:bwa-mem2\tPN:bwa-mem2\tVN:%s\tCL:%s", PACKAGE_VERSION, argv[0]);
 
         for (int i = 1; i < argc; ++i) ksprintf(&pg, " %s", argv[i]);
@@ -100,9 +98,9 @@ int main(int argc, char* argv[])
         bwa_pg = pg.s;
         ret = main_mem(argc-1, argv+1);
         free(bwa_pg);
-
+        
         /** Enable this return to avoid printing of the runtime profiling **/
-        //return ret;
+        return ret;
     }
     else if (strcmp(argv[1], "version") == 0)
     {
@@ -112,7 +110,6 @@ int main(int argc, char* argv[])
         fprintf(stderr, "ERROR: unknown command '%s'\n", argv[1]);
         return 1;
     }
-    /*
     if (ret == 0) {
         fprintf(stderr, "\nImportant parameter settings: \n");
         fprintf(stderr, "\tBATCH_SIZE: %d\n", BATCH_SIZE);
@@ -124,6 +121,5 @@ int main(int argc, char* argv[])
         fprintf(stderr, "\tSIMD_WIDTH16 X: %d\n", SIMD_WIDTH16);
         fprintf(stderr, "\tAVG_SEEDS_PER_READ: %d\n", AVG_SEEDS_PER_READ);
     }
-    */
     return ret;
 }
