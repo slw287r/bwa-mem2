@@ -138,6 +138,7 @@ mem_opt_t *mem_opt_init()
     o->min_chain_weight = 0;
     o->max_chain_extend = 1<<30;
     o->mapQ_coef_len = 50; o->mapQ_coef_fac = log(o->mapQ_coef_len);
+    o->max_read_length = READ_LEN;
     bwa_fill_scmat(o->a, o->b, o->mat);
     return o;
 }
@@ -628,7 +629,8 @@ SMEM *mem_collect_smem(FMI_search *fmi, const mem_opt_t *opt,
                        int16_t *query_pos_ar,
                        uint8_t *enc_qdb,
                        int32_t *rid,
-                       int64_t &tot_smem)
+                       int64_t &tot_smem,
+                       int64_t max_smem)
 {
     int64_t pos = 0;
     int split_len = (int)(opt->min_seed_len * opt->split_factor + .499);
@@ -658,7 +660,7 @@ SMEM *mem_collect_smem(FMI_search *fmi, const mem_opt_t *opt,
 
     fmi->getSMEMsAllPosOneThread(enc_qdb, min_intv_ar, rid, nseq, nseq,
                                  seq_, query_cum_len_ar, max_readlength, opt->min_seed_len,
-                                 matchArray, &num_smem1);
+                                 matchArray, &num_smem1, max_smem);
 
 
     for (int64_t i=0; i<num_smem1; i++)
@@ -691,7 +693,8 @@ SMEM *mem_collect_smem(FMI_search *fmi, const mem_opt_t *opt,
                                  max_readlength,
                                  opt->min_seed_len,
                                  matchArray + num_smem1,
-                                 &num_smem2);
+                                 &num_smem2,
+                                 max_smem - num_smem1);
 
     if (opt->max_mem_intv > 0)
     {
@@ -701,7 +704,8 @@ SMEM *mem_collect_smem(FMI_search *fmi, const mem_opt_t *opt,
         num_smem3 = fmi->bwtSeedStrategyAllPosOneThread(enc_qdb, min_intv_ar,
                                                         nseq, seq_, query_cum_len_ar, 
                                                         opt->min_seed_len + 1,
-                                                        matchArray + num_smem1 + num_smem2);        
+                                                        matchArray + num_smem1 + num_smem2,
+                                                        max_smem - num_smem1 - num_smem2);        
     }
     tot_smem = num_smem1 + num_smem2 + num_smem3;
 
@@ -960,11 +964,12 @@ int mem_kernel1_core(FMI_search *fmi,
                      query_pos_ar,
                      enc_qdb,
                      rid,
-                     num_smem);
+                     num_smem,
+                     *wsize_mem);
 
     if (num_smem >= *wsize_mem){
-        fprintf(stderr, "num_smem: %ld\n", num_smem);
-        assert(num_smem < *wsize_mem);
+        fprintf(stderr, "Error [bug]: num_smem: %ld is more than allocated space.\n", num_smem);
+        exit(EXIT_FAILURE);
     }
     printf_(VER, "6. Done! mem_collect_smem, num_smem: %ld\n", num_smem);
     tprof[MEM_COLLECT][tid] += __rdtsc() - tim; 

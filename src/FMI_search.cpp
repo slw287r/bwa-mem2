@@ -610,7 +610,8 @@ void FMI_search::getSMEMsOnePosOneThread(uint8_t *enc_qdb,
                                          int32_t max_readlength,
                                          int32_t minSeedLen,
                                          SMEM *matchArray,
-                                         int64_t *__numTotalSmem)
+                                         int64_t *__numTotalSmem,
+                                         int64_t max_smem)
 {
     int64_t numTotalSmem = *__numTotalSmem;
     SMEM prevArray[max_readlength];
@@ -719,6 +720,16 @@ void FMI_search::getSMEMsOnePosOneThread(uint8_t *enc_qdb,
                     if((newSmem.s < min_intv_array[i]) && ((smem.n - smem.m + 1) >= minSeedLen))
                     {
                         cur_j = j;
+                        if (numTotalSmem >= max_smem) {
+                             // fail before segfault
+                             fprintf(
+                                 stderr,
+                                 "Error: num smem (%ld) >= max smem (%ld), check max read length.\n",
+                                 numTotalSmem,
+                                 max_smem
+                             );
+                             exit(EXIT_FAILURE);
+                        }
 
                         matchArray[numTotalSmem++] = smem;
                         break;
@@ -764,6 +775,16 @@ void FMI_search::getSMEMsOnePosOneThread(uint8_t *enc_qdb,
                 SMEM smem = prev[0];
                 if(((smem.n - smem.m + 1) >= minSeedLen))
                 {
+                    if (numTotalSmem >= max_smem) {
+                         // fail before segfault
+                         fprintf(
+                             stderr,
+                             "Error: num smem (%ld) >= max smem (%ld), check max read length.\n",
+                             numTotalSmem,
+                             max_smem
+                         );
+                         exit(EXIT_FAILURE);
+                    }
 
                     matchArray[numTotalSmem++] = smem;
                 }
@@ -785,7 +806,8 @@ void FMI_search::getSMEMsAllPosOneThread(uint8_t *enc_qdb,
                                          int32_t max_readlength,
                                          int32_t minSeedLen,
                                          SMEM *matchArray,
-                                         int64_t *__numTotalSmem)
+                                         int64_t *__numTotalSmem,
+                                         int64_t max_smem)
 {
     int16_t *query_pos_array = (int16_t *)_mm_malloc(numReads * sizeof(int16_t), 64);
     
@@ -822,7 +844,8 @@ void FMI_search::getSMEMsAllPosOneThread(uint8_t *enc_qdb,
                                 max_readlength,
                                 minSeedLen,
                                 matchArray,
-                                __numTotalSmem);
+                                __numTotalSmem,
+                                max_smem);
         numActive = tail;
     } while(numActive > 0);
 
@@ -835,7 +858,8 @@ int64_t FMI_search::bwtSeedStrategyAllPosOneThread(uint8_t *enc_qdb,
                                                    const bseq1_t *seq_,
                                                    int32_t *query_cum_len_ar,
                                                    int32_t minSeedLen,
-                                                   SMEM *matchArray)
+                                                   SMEM *matchArray,
+                                                   int64_t max_smem)
 {
     int32_t i;
 
@@ -898,6 +922,16 @@ int64_t FMI_search::bwtSeedStrategyAllPosOneThread(uint8_t *enc_qdb,
 
                             if(smem.s > 0)
                             {
+                                if (numTotalSeed >= max_smem) {
+                                     // fail before segfault
+                                     fprintf(
+                                       stderr,
+                                       "Error: num smem (%ld) >= max smem (%ld), check max read length.\n",
+                                       numTotalSeed,
+                                       max_smem
+                                     );
+                                     exit(EXIT_FAILURE);
+                                }
                                 matchArray[numTotalSeed++] = smem;
                             }
                             break;
