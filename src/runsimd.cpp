@@ -154,11 +154,11 @@ static void test_and_launch(char *argv[], char *prefix, const char *simd) // we 
     struct stat st;
     int prefix_len = strlen(prefix);
     strcat_s(prefix, PATH_MAX, simd);
-    fprintf(stderr, "Looking to launch executable \"%s\", simd = %s\n", prefix, simd);
+    //fprintf(stderr, "Looking to launch executable \"%s\", simd = %s\n", prefix, simd);
     if(stat(prefix, &st) == 0)
     {
         if (st.st_mode & S_IXUSR) {
-            fprintf(stderr, "Launching executable \"%s\"\n", prefix);
+            //fprintf(stderr, "Launching executable \"%s\"\n", prefix);
             execv(prefix, argv);
         }
         else

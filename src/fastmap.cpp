@@ -101,7 +101,7 @@ void memoryAlloc(ktp_aux_t *aux, worker_t &w, int32_t nreads, int32_t nthreads)
 {
     mem_opt_t *opt = aux->opt;  
     int32_t memSize = nreads;
-    int32_t readLen = READ_LEN;
+    int32_t readLen = opt->max_read_length;
 
     /* Mem allocation section for core kernels */
     w.regs = NULL; w.chain_ar = NULL; w.seedBuf = NULL;
@@ -120,7 +120,7 @@ void memoryAlloc(ktp_aux_t *aux, worker_t &w, int32_t nreads, int32_t nthreads)
     int64_t allocMem = memSize * sizeof(mem_alnreg_v) +
         memSize * sizeof(mem_chain_v) +
         sizeof(mem_seed_t) * memSize * AVG_SEEDS_PER_READ;
-    fprintf(stderr, "------------------------------------------\n");
+    fprintf(stderr, "----------------------------------------------------\n");
     fprintf(stderr, "1. Memory pre-allocation for Chaining: %0.4lf MB\n", allocMem/1e6);
 
     
@@ -180,9 +180,8 @@ void memoryAlloc(ktp_aux_t *aux, worker_t &w, int32_t nreads, int32_t nthreads)
         nthreads * BATCH_MUL * BATCH_SIZE * readLen *sizeof(int32_t) +
         nthreads * (BATCH_SIZE + 32) * sizeof(int32_t);
     fprintf(stderr, "3. Memory pre-allocation for BWT: %0.4lf MB\n", allocMem/1e6);
-    fprintf(stderr, "------------------------------------------\n");
+    fprintf(stderr, "----------------------------------------------------\n");
 }
-
 ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, worker_t &w)
 {
     ktp_aux_t *aux = (ktp_aux_t*) shared;
@@ -320,7 +319,6 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
     
     return 0;
 }
-
 static void *ktp_worker(void *data)
 {   
     ktp_worker_t *w = (ktp_worker_t*) data;
@@ -453,7 +451,7 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
     }
 #endif
     
-    int32_t nreads = aux->actual_chunk_size/ READ_LEN + 10;
+    int32_t nreads = aux->actual_chunk_size/ opt->max_read_length + 10;
     
     /* All memory allocation */
     memoryAlloc(aux, w, nreads, nthreads);
@@ -607,7 +605,8 @@ static void usage(const mem_opt_t *opt)
     fprintf(stderr, "                 specify the mean, standard deviation (10%% of the mean if absent), max\n");
     fprintf(stderr, "                 (4 sigma from the mean if absent) and min of the insert size distribution.\n");
     fprintf(stderr, "                 FR orientation only. [inferred]\n");
-	fprintf(stderr, "   -z            Use MMAP to access reference structures\n");
+    fprintf(stderr, "   -l INT        maximum expected read length, needed for memory allocation [%d]\n", opt->max_read_length);
+    fprintf(stderr, "   -z            Use MMAP to access reference structures\n");
     fprintf(stderr, "Note: Please read the man page for detailed description of the command line and options.\n");
 }
 
@@ -638,7 +637,7 @@ int main_mem(int argc, char *argv[])
     
     /* Parse input arguments */
     // comment: added option '5' in the list
-    while ((c = getopt(argc, argv, "51qpaMCSPVYjk:c:v:s:r:t:R:A:B:O:E:U:w:L:d:T:Q:D:m:I:N:W:x:G:h:y:K:X:H:o:f:z")) >= 0)
+    while ((c = getopt(argc, argv, "51qpaMCSPVYjk:c:v:s:r:t:R:A:B:O:E:U:w:L:d:T:Q:D:m:I:N:W:x:G:h:y:K:X:H:o:f:l:z")) >= 0)
     {
         if (c == 'k') opt->min_seed_len = atoi(optarg), opt0.min_seed_len = 1;
         else if (c == '1') no_mt_io = 1;
@@ -691,6 +690,7 @@ int main_mem(int argc, char *argv[])
         else if (c == 'C') aux.copy_comment = 1;
         else if (c == 'K') fixed_chunk_size = atoi(optarg);
         else if (c == 'X') opt->mask_level = atof(optarg);
+        else if (c == 'l') opt->max_read_length = atoi(optarg);
         else if (c == 'h')
         {
             opt0.max_XA_hits = opt0.max_XA_hits_alt = 1;
@@ -871,6 +871,7 @@ int main_mem(int argc, char *argv[])
     int64_t bwt_size;
     file_size(bwt, &bwt_size);
     free(bwt);
+	/*
     if (bwt_size > max_locked_mem())
     {
         if (opt->use_mmap)
@@ -883,6 +884,7 @@ int main_mem(int argc, char *argv[])
             opt->use_mmap = 0;
         }
     }
+	*/
     aux.fmi = new FMI_search(argv[optind], opt->use_mmap);
     if (opt->use_mmap)
         aux.fmi->mmap_index();
@@ -937,7 +939,7 @@ int main_mem(int argc, char *argv[])
         fclose(fr);
     }
     fprintf(stderr, "* Reference genome size: %ld bp\n", rlen);
-    fprintf(stderr, "* Done reading reference genome !!\n\n");
+    fprintf(stderr, "* Done reading reference genome!!\n\n");
 
     if (ignore_alt)
         for (i = 0; i < aux.fmi->idx->bns->n_seqs; ++i)
@@ -1034,7 +1036,7 @@ int main_mem(int argc, char *argv[])
 
     /* Display runtime profiling stats */
     tprof[MEM][0] = __rdtsc() - tprof[MEM][0];
-    display_stats(nt);
+    //display_stats(nt);
     
     return 0;
 }

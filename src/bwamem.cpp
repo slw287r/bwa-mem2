@@ -138,6 +138,7 @@ mem_opt_t *mem_opt_init()
     o->min_chain_weight = 0;
     o->max_chain_extend = 1<<30;
     o->mapQ_coef_len = 50; o->mapQ_coef_fac = log(o->mapQ_coef_len);
+    o->max_read_length = READ_LEN;
     bwa_fill_scmat(o->a, o->b, o->mat);
     return o;
 }
@@ -152,10 +153,10 @@ KSORT_INIT(mem_ars2, mem_alnreg_t, alnreg_slt2)
 #define alnreg_slt(a, b) ((a).score > (b).score || ((a).score == (b).score && ((a).rb < (b).rb || ((a).rb == (b).rb && (a).qb < (b).qb))))
 KSORT_INIT(mem_ars, mem_alnreg_t, alnreg_slt)
 
-#define alnreg_hlt(a, b)  ((a).score > (b).score || ((a).score == (b).score && ((a).is_alt < (b).is_alt || ((a).is_alt == (b).is_alt && (a).hash < (b).hash))))
+#define alnreg_hlt(a, b)  ((a).gscore > (b).gscore || ((a).gscore == (b).gscore && ((a).is_alt < (b).is_alt || ((a).is_alt == (b).is_alt && (a).hash < (b).hash))))
 KSORT_INIT(mem_ars_hash, mem_alnreg_t, alnreg_hlt)
 
-#define alnreg_hlt2(a, b) ((a).is_alt < (b).is_alt || ((a).is_alt == (b).is_alt && ((a).score > (b).score || ((a).score == (b).score && (a).hash < (b).hash))))
+#define alnreg_hlt2(a, b) ((a).is_alt < (b).is_alt || ((a).is_alt == (b).is_alt && ((a).gscore > (b).gscore || ((a).gscore == (b).gscore && (a).truesc > (b).truesc) || ((a).gscore == (b).gscore && (a).hash < (b).hash))))
 KSORT_INIT(mem_ars_hash2, mem_alnreg_t, alnreg_hlt2)
 
 #if MATE_SORT
@@ -171,7 +172,6 @@ void sort_alnreg_score(int n, mem_alnreg_t* a) {
 
 #define PATCH_MAX_R_BW 0.05f
 #define PATCH_MIN_SC_RATIO 0.90f
-
 int mem_patch_reg(const mem_opt_t *opt, const bntseq_t *bns, const uint8_t *pac,
                   uint8_t *query, const mem_alnreg_t *a, const mem_alnreg_t *b,
                   int *_w)
@@ -209,7 +209,6 @@ int mem_patch_reg(const mem_opt_t *opt, const bntseq_t *bns, const uint8_t *pac,
     bwa_gen_cigar2(opt->mat, opt->o_del, opt->e_del, opt->o_ins, opt->e_ins, w,
                    bns->l_pac, pac, b->qe - a->qb, query + a->qb, a->rb, b->re,
                    &score, 0, 0);
-    
     q_s = (int)((double)(b->qe - a->qb) / ((b->qe - b->qb) + (a->qe - a->qb)) *
                 (b->score + a->score) + .499); // predicted score from query
     
@@ -223,6 +222,7 @@ int mem_patch_reg(const mem_opt_t *opt, const bntseq_t *bns, const uint8_t *pac,
     *_w = w;
     return score;
 }
+
 /*********************************
  * Test if a seed is good enough *
  *********************************/
@@ -234,7 +234,6 @@ int mem_patch_reg(const mem_opt_t *opt, const bntseq_t *bns, const uint8_t *pac,
 #define MEM_MINSC_COEF 5.5f
 #define MEM_SEEDSW_COEF 0.05f
 //int stat;
-
 #if MATE_SORT
 int mem_dedup_patch(const mem_opt_t *opt, const bntseq_t *bns,
                     const uint8_t *pac, uint8_t *query, int n,
@@ -288,7 +287,6 @@ int mem_dedup_patch(const mem_opt_t *opt, const bntseq_t *bns,
     return m;
 }
 #endif
-
 int mem_sort_dedup_patch(const mem_opt_t *opt, const bntseq_t *bns,
                          const uint8_t *pac, uint8_t *query, int n,
                          mem_alnreg_t *a)
@@ -631,7 +629,8 @@ SMEM *mem_collect_smem(FMI_search *fmi, const mem_opt_t *opt,
                        int16_t *query_pos_ar,
                        uint8_t *enc_qdb,
                        int32_t *rid,
-                       int64_t &tot_smem)
+                       int64_t &tot_smem,
+                       int64_t max_smem)
 {
     int64_t pos = 0;
     int split_len = (int)(opt->min_seed_len * opt->split_factor + .499);
@@ -661,7 +660,7 @@ SMEM *mem_collect_smem(FMI_search *fmi, const mem_opt_t *opt,
 
     fmi->getSMEMsAllPosOneThread(enc_qdb, min_intv_ar, rid, nseq, nseq,
                                  seq_, query_cum_len_ar, max_readlength, opt->min_seed_len,
-                                 matchArray, &num_smem1);
+                                 matchArray, &num_smem1, max_smem);
 
 
     for (int64_t i=0; i<num_smem1; i++)
@@ -694,7 +693,8 @@ SMEM *mem_collect_smem(FMI_search *fmi, const mem_opt_t *opt,
                                  max_readlength,
                                  opt->min_seed_len,
                                  matchArray + num_smem1,
-                                 &num_smem2);
+                                 &num_smem2,
+                                 max_smem - num_smem1);
 
     if (opt->max_mem_intv > 0)
     {
@@ -704,7 +704,8 @@ SMEM *mem_collect_smem(FMI_search *fmi, const mem_opt_t *opt,
         num_smem3 = fmi->bwtSeedStrategyAllPosOneThread(enc_qdb, min_intv_ar,
                                                         nseq, seq_, query_cum_len_ar, 
                                                         opt->min_seed_len + 1,
-                                                        matchArray + num_smem1 + num_smem2);        
+                                                        matchArray + num_smem1 + num_smem2,
+                                                        max_smem - num_smem1 - num_smem2);        
     }
     tot_smem = num_smem1 + num_smem2 + num_smem3;
 
@@ -963,11 +964,12 @@ int mem_kernel1_core(FMI_search *fmi,
                      query_pos_ar,
                      enc_qdb,
                      rid,
-                     num_smem);
+                     num_smem,
+                     *wsize_mem);
 
     if (num_smem >= *wsize_mem){
-        fprintf(stderr, "num_smem: %ld\n", num_smem);
-        assert(num_smem < *wsize_mem);
+        fprintf(stderr, "Error [bug]: num_smem: %ld is more than allocated space.\n", num_smem);
+        exit(EXIT_FAILURE);
     }
     printf_(VER, "6. Done! mem_collect_smem, num_smem: %ld\n", num_smem);
     tprof[MEM_COLLECT][tid] += __rdtsc() - tim; 
@@ -1091,7 +1093,6 @@ int mem_kernel2_core(FMI_search *fmi,
     
     return 1;
 }
-
 static void worker_aln(void *data, int seq_id, int batch_size, int tid)
 {
     worker_t *w = (worker_t*) data;
@@ -1135,7 +1136,6 @@ static void worker_bwt(void *data, int seq_id, int batch_size, int tid)
 
 int64_t sort_classify(mem_cache *mmc, int64_t pcnt, int tid)
 {
-
     SeqPair *seqPairArray = mmc->seqPairArrayLeft128[tid];
     // SeqPair *seqPairArrayAux = mmc->seqPairArrayAux[tid];
     SeqPair *seqPairArrayAux = mmc->seqPairArrayRight128[tid];
@@ -1347,7 +1347,9 @@ int mem_mark_primary_se(const mem_opt_t *opt, int n, mem_alnreg_t *a, int64_t id
     {
         a[i].sub = a[i].alt_sc = 0, a[i].secondary = a[i].secondary_all = -1, a[i].hash = hash_64(id+i);
         if (!a[i].is_alt) ++n_pri;
+		a[i].gscore = a[i].score + a[i].truesc;
     }
+	// calc gscore
     ks_introsort(mem_ars_hash, n, a);
     mem_mark_primary_se_core(opt, n, a, &z);
     for (i = 0; i < n; ++i)
@@ -1944,7 +1946,6 @@ inline void sortPairsLenExt(SeqPair *pairArray, int32_t count, SeqPair *tempArra
 
 inline void sortPairsLen(SeqPair *pairArray, int32_t count, SeqPair *tempArray, int32_t *hist)
 {
-
     int32_t i;
 #if ((!__AVX512BW__) & (__AVX2__ | __SSE2__))
     for(i = 0; i <= MAX_SEQ_LEN16; i++) hist[i] = 0;
@@ -2474,7 +2475,6 @@ void mem_chain2aln_across_reads_V2(const mem_opt_t *opt, const bntseq_t *bns,
 
             int prev = a->score;
             a->score = sp->score;
-
             
             if (a->score == prev || sp->max_off < (w >> 1) + (w >> 2) ||
                 i+1 == MAX_BAND_TRY)

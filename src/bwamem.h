@@ -105,6 +105,7 @@ typedef struct mem_opt_t {
     int max_matesw;         // perform maximally max_matesw rounds of mate-SW for each end
     int max_XA_hits, max_XA_hits_alt; // if there are max_hits or fewer, output them all
     int8_t mat[25];         // scoring matrix; mat[0] == 0 if unset
+	int max_read_length;    // maximum read length expected, needed for allocating memory
     int use_mmap;           // use mmap to access index files
 } mem_opt_t;
 
@@ -143,6 +144,7 @@ typedef struct mem_alnreg_t {
     mem_chain_t *c;
     int score;      // best local SW score
     int truesc;     // actual score corresponding to the aligned region; possibly smaller than $score
+    int gscore;     // score + truesc
     int sub;        // 2nd best SW score
     int alt_sc;
     int csub;       // SW score of a tandem hit

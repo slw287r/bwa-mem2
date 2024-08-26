@@ -32,7 +32,7 @@ Contacts: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@
 #include "main.h"
 
 #ifndef PACKAGE_VERSION
-#define PACKAGE_VERSION "2.2.1"
+#define PACKAGE_VERSION "2.2.1c"
 #endif
 
 
@@ -52,14 +52,14 @@ int usage()
 
 int main(int argc, char* argv[])
 {
-        
     // ---------------------------------    
     uint64_t tim = __rdtsc();
     sleep(1);
     proc_freq = __rdtsc() - tim;
 
     int ret = -1;
-    if (argc < 2) return usage();
+    if (argc < 2 || !memcmp(argv[1], "-h", 2) || !memcmp(argv[1], "--h", 3))
+        return usage();
 
     if (strcmp(argv[1], "index") == 0)
     {
@@ -101,9 +101,10 @@ int main(int argc, char* argv[])
         free(bwa_pg);
         
         /** Enable this return to avoid printing of the runtime profiling **/
-        //return ret;
+        return ret;
     }
-    else if (strcmp(argv[1], "version") == 0)
+    else if (!strcmp(argv[1], "version") || !memcmp(argv[1], "-v", 2) ||
+            !memcmp(argv[1], "--v", 3))
     {
         puts(PACKAGE_VERSION);
         return 0;
