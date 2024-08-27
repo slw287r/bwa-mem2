@@ -622,7 +622,7 @@ static void usage(const mem_opt_t *opt)
     fprintf(stderr, "                 FR orientation only. [inferred]\n");
     fprintf(stderr, "   -l INT        maximum expected read length, needed for memory allocation [%d]\n", opt->max_read_length);
     fprintf(stderr, "   -z            use MMAP to access reference structures\n");
-    fprintf(stderr, "   -Z INT        kill \033[31m%s\033[0m mem in case MMAP (via -z) lasts for more than INT minutes [unlimited]\n", __progname);
+    fprintf(stderr, "   -Z INT        time out \033[31m%s\033[0m mem in case MMAP (via -z) hangs for more than INT minutes []\n", __progname);
     fprintf(stderr, "Note: Please read the man page for detailed description of the command line and options.\n");
 }
 
