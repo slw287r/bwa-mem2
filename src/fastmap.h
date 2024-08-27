@@ -42,6 +42,7 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #include <errno.h>
 #include <math.h>
 #include <fstream>
+#include <algorithm>
 
 #include "bwa.h"
 #include "bwamem.h"
@@ -51,6 +52,7 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #include "bntseq.h"
 #include "kseq.h"
 #include "profiling.h"
+
 
 KSEQ_DECLARE(gzFile)
 

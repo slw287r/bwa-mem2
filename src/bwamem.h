@@ -107,6 +107,7 @@ typedef struct mem_opt_t {
     int8_t mat[25];         // scoring matrix; mat[0] == 0 if unset
 	int max_read_length;    // maximum read length expected, needed for allocating memory
     int use_mmap;           // use mmap to access index files
+    float mmap_timeout;     // kill bwa-mem2 mem process if it mmap hangs
 } mem_opt_t;
 
 

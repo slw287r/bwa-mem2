@@ -606,7 +606,8 @@ static void usage(const mem_opt_t *opt)
     fprintf(stderr, "                 (4 sigma from the mean if absent) and min of the insert size distribution.\n");
     fprintf(stderr, "                 FR orientation only. [inferred]\n");
     fprintf(stderr, "   -l INT        maximum expected read length, needed for memory allocation [%d]\n", opt->max_read_length);
-    fprintf(stderr, "   -z            Use MMAP to access reference structures\n");
+    fprintf(stderr, "   -z            use MMAP to access reference structures\n");
+    fprintf(stderr, "   -Z            kill MMAP (via -z) if it falls into zzZ state [unlimited]\n");
     fprintf(stderr, "Note: Please read the man page for detailed description of the command line and options.\n");
 }
 
@@ -634,15 +635,17 @@ int main_mem(int argc, char *argv[])
     aux.fp = stdout;
     aux.opt = opt = mem_opt_init();
     memset(&opt0, 0, sizeof(mem_opt_t));
+    opt->mmap_timeout = INT_MAX;
     
     /* Parse input arguments */
     // comment: added option '5' in the list
-    while ((c = getopt(argc, argv, "51qpaMCSPVYjk:c:v:s:r:t:R:A:B:O:E:U:w:L:d:T:Q:D:m:I:N:W:x:G:h:y:K:X:H:o:f:l:z")) >= 0)
+    while ((c = getopt(argc, argv, "51qpaMCSPVYjk:c:v:s:r:t:R:A:B:O:E:U:w:L:d:T:Q:D:m:I:N:W:x:G:h:y:K:X:H:o:f:l:zZ:")) >= 0)
     {
         if (c == 'k') opt->min_seed_len = atoi(optarg), opt0.min_seed_len = 1;
         else if (c == '1') no_mt_io = 1;
         else if (c == 'x') mode = optarg;
         else if (c == 'z') opt->use_mmap = 1;
+        else if (c == 'Z') opt->mmap_timeout = atof(optarg);
         else if (c == 'w') opt->w = atoi(optarg), opt0.w = 1;
         else if (c == 'A') opt->a = atoi(optarg), opt0.a = 1, assert(opt->a >= INT_MIN && opt->a <= INT_MAX);
         else if (c == 'B') opt->b = atoi(optarg), opt0.b = 1, assert(opt->b >= INT_MIN && opt->b <= INT_MAX);
@@ -887,7 +890,17 @@ int main_mem(int argc, char *argv[])
 	*/
     aux.fmi = new FMI_search(argv[optind], opt->use_mmap);
     if (opt->use_mmap)
-        aux.fmi->mmap_index();
+    {
+        if (opt->mmap_timeout == INT_MAX)
+            aux.fmi->mmap_index();
+        else
+        {
+            aux.fmi->init_mmap_index();
+            signal(SIGALRM, alarm_handler);
+            alarm(std::max(1, (int)(opt->mmap_timeout * 60)));
+            aux.fmi->wait_mmap_index();
+        }
+    }
     else
         aux.fmi->load_index();
     tprof[FMI][0] += __rdtsc() - tim;
@@ -906,7 +919,7 @@ int main_mem(int argc, char *argv[])
     {
         int64_t st_size = 0;
         file_size(binary_seq_file, &st_size);
-        void* bns_map = mmap_file(binary_seq_file, 0);
+        void *bns_map = mmap_file(binary_seq_file, 0);
 
         ref_string = (uint8_t*)bns_map;
         aux.ref_string = ref_string;

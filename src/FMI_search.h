@@ -38,6 +38,11 @@ Authors: Sanchit Misra <sanchit.misra@intel.com>; Vasimuddin Md <vasimuddin.md@i
 #include <limits.h>
 #include <fstream>
 
+// for function time out
+#include <unistd.h>
+#include <pthread.h>
+#include <signal.h>
+
 #include "read_index_ele.h"
 #include "bwa.h"
 #include "utils.h"
@@ -51,6 +56,7 @@ Authors: Sanchit Misra <sanchit.misra@intel.com>; Vasimuddin Md <vasimuddin.md@i
 #define CP_FILENAME_SUFFIX ".bwt.2bit.64"
 #define CP_MASK 63
 #define CP_SHIFT 6
+
 
 typedef struct checkpoint_occ_scalar
 {
@@ -85,13 +91,23 @@ typedef struct smem_struct
 
 #define SAL_PFD 16
 
+typedef struct
+{
+	char file_name[PATH_MAX];
+    int64_t reference_seq_len;
+    int64_t count[5];
+} ref_t;
+
+void alarm_handler(int);
+void *mmap_index_alarm(void *arg);
+
 class FMI_search: public indexEle
 {
     public:
     FMI_search(const char *fname, int _use_mmap);
     ~FMI_search();
     //int64_t beCalls;
-    
+
     int build_index();
     void load_index();
     void mmap_index();
@@ -105,7 +121,7 @@ class FMI_search: public indexEle
                   int32_t numthreads,
                   SMEM *matchArray,
                   int64_t *numTotalSmem);
-    
+
     void getSMEMsOnePosOneThread(uint8_t *enc_qdb,
                                  int16_t *query_pos_array,
                                  int32_t *min_intv_array,
@@ -119,7 +135,7 @@ class FMI_search: public indexEle
                                  SMEM *matchArray,
                                  int64_t *__numTotalSmem,
                                  int64_t max_smem);
-    
+
     void getSMEMsAllPosOneThread(uint8_t *enc_qdb,
                                  int32_t *min_intv_array,
                                  int32_t *rid_array,
@@ -132,7 +148,7 @@ class FMI_search: public indexEle
                                  SMEM *matchArray,
                                  int64_t *__numTotalSmem,
                                  int64_t max_smem);
-    
+
     int64_t bwtSeedStrategyAllPosOneThread(uint8_t *enc_qdb,
                                            int32_t *max_intv_array,
                                            int32_t numReads,
@@ -141,7 +157,7 @@ class FMI_search: public indexEle
                                            int32_t minSeedLen,
                                            SMEM *matchArray,
                                            int64_t max_smem);
-        
+
     void sortSMEMs(SMEM *matchArray,
                    int64_t numTotalSmem[],
                    int32_t numReads,
@@ -168,33 +184,37 @@ class FMI_search: public indexEle
     void get_sa_entries_prefetch(SMEM *smemArray, int64_t *coordArray,
                                  int64_t *coordCountArray, int64_t count,
                                  const int32_t max_occ, int tid, int64_t &id_);
-    
+
     int64_t reference_seq_len;
     int64_t sentinel_index;
+    void init_mmap_index(void);
+	void wait_mmap_index(void);
 private:
-        void info(const char *format, ...);
-        void error(const char *format, ...);
-        char file_name[PATH_MAX];
-        int64_t index_alloc;
-        int64_t count[5];
-        uint32_t *sa_ls_word;
-        int8_t *sa_ms_byte;
-        CP_OCC *cp_occ;
+    void info(const char *format, ...);
+    void error(const char *format, ...);
+    char file_name[PATH_MAX];
+    int64_t index_alloc;
+    int64_t count[5];
+    uint32_t *sa_ls_word;
+    int8_t *sa_ms_byte;
+    CP_OCC *cp_occ;
 
-        uint64_t *one_hot_mask_array;
+    uint64_t *one_hot_mask_array;
 
-        int64_t pac_seq_len(const char *fn_pac);
-        void pac2nt(const char *fn_pac,
-                    std::string &reference_seq);
-        int build_fm_index(const char *ref_file_name,
-                               char *binary_seq,
-                               int64_t ref_seq_len,
-                               int64_t *sa_bwt,
-                               int64_t *count);
-        SMEM backwardExt(SMEM smem, uint8_t a);
-        int use_mmap;
-        void *cp_map;
-        int64_t cp_size;
+    int64_t pac_seq_len(const char *fn_pac);
+    void pac2nt(const char *fn_pac,
+                std::string &reference_seq);
+    int build_fm_index(const char *ref_file_name,
+                           char *binary_seq,
+                           int64_t ref_seq_len,
+                           int64_t *sa_bwt,
+                           int64_t *count);
+    SMEM backwardExt(SMEM smem, uint8_t a);
+    int use_mmap;
+    void *cp_map;
+    int64_t cp_size;
+    pthread_t mmap_thread_id;
+    friend void *mmap_index_alarm(void *arg);
 };
 
 #endif

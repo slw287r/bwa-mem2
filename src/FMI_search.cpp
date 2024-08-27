@@ -42,6 +42,15 @@ extern "C" {
 }
 #endif
 
+void alarm_handler(int)
+{
+    fprintf(stderr, "\033[31mReference memory-mapping timed out...\033[0m\n");
+	char commit_suicide[PATH_MAX];
+	snprintf(commit_suicide, PATH_MAX, "kill -9 %d &>/dev/null", getpid());
+	system(commit_suicide);
+	exit(EXIT_FAILURE);
+}
+
 void FMI_search::info(const char *format, ...)
 {
     va_list ap;
@@ -455,9 +464,9 @@ void FMI_search::load_index()
     sa_ls_word = (uint32_t *)_mm_malloc(reference_seq_len_ * sizeof(uint32_t), 64);
     err_fread_noeof(sa_ms_byte, sizeof(int8_t), reference_seq_len_, cpstream);
     err_fread_noeof(sa_ls_word, sizeof(uint32_t), reference_seq_len_, cpstream);
-    
+
     #else
-    
+
     sa_ms_byte = (int8_t *)_mm_malloc(reference_seq_len * sizeof(int8_t), 64);
     sa_ls_word = (uint32_t *)_mm_malloc(reference_seq_len * sizeof(uint32_t), 64);
     err_fread_noeof(sa_ms_byte, sizeof(int8_t), reference_seq_len, cpstream);
@@ -501,6 +510,112 @@ void FMI_search::load_index()
     bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 0);
 
     fprintf(stderr, "* Done reading Index!!\n");
+}
+
+void *mmap_index_alarm(void *arg)
+{
+    FMI_search *th = (FMI_search *)arg;
+    th->one_hot_mask_array = (uint64_t *)_mm_malloc(64 * sizeof(uint64_t), 64);
+    th->one_hot_mask_array[0] = 0;
+    uint64_t base = 0x8000000000000000L;
+    th->one_hot_mask_array[1] = base;
+    int64_t i = 0;
+    for(i = 2; i < 64; i++)
+        th->one_hot_mask_array[i] = (th->one_hot_mask_array[i - 1] >> 1) | base;
+
+    char *ref_file_name = th->file_name; // hs37d5.fa
+    //beCalls = 0;
+    char cp_file_name[PATH_MAX];
+    strcpy_s(cp_file_name, PATH_MAX, ref_file_name);
+    strcat_s(cp_file_name, PATH_MAX, CP_FILENAME_SUFFIX); // hs37d5.fa.bwt.2bit.64
+
+    // Read the BWT and FM index of the reference sequence
+    th->cp_map = mmap_file(cp_file_name, 0);
+    file_size(cp_file_name, &th->cp_size);
+    void *p = th->cp_map;
+
+    memcpy_s(&th->reference_seq_len, sizeof(int64_t), (int64_t *)p, sizeof(int64_t));
+    assert(th->reference_seq_len > 0);
+    assert(th->reference_seq_len <= 0x7fffffffffL);
+    th->info("* Reference seq len for bi-index = %ld\n", th->reference_seq_len); // 6274909011
+
+    // create checkpointed occ
+    p = (int64_t *)p + 1;
+    memcpy_s(th->count, 5 * sizeof(int64_t), p, 5 * sizeof(int64_t));
+    p = (int64_t *)p + 5;
+
+    int64_t cp_occ_size = (th->reference_seq_len >> CP_SHIFT) + 1; // 64 parts 2^6
+    th->cp_occ = (CP_OCC *)p;
+    p = (CP_OCC *)p + cp_occ_size;
+    for(i = 0; i < 5; i++)// update read count structure
+        ++th->count[i];
+    #if SA_COMPRESSION
+
+    int64_t reference_seq_len_ = (th->reference_seq_len >> SA_COMPX) + 1; // 8 parts 2^3
+    th->sa_ms_byte = (int8_t *)p;
+    p = (int8_t *)p + reference_seq_len_;
+    th->sa_ls_word = (uint32_t *)p;
+    p = (uint32_t *)p + reference_seq_len_;
+
+    #else
+
+    th->sa_ms_byte = (int8_t *)p;
+    p = (int8_t *)p + th->reference_seq_len;
+    th->sa_ls_word = (uint32_t *)p;
+    p = (uint32_t *)p + th->reference_seq_len;
+
+    #endif
+
+    th->sentinel_index = -1;
+    #if SA_COMPRESSION
+    memcpy_s(&th->sentinel_index, sizeof(int64_t), p, sizeof(int64_t));
+    fprintf(stderr, "* sentinel-index: %ld\n", th->sentinel_index);
+    #endif
+
+    int64_t x;
+    #if !SA_COMPRESSION
+    for(x = 0; x < th->reference_seq_len; x++)
+    {
+        // fprintf(stderr, "x: %ld\n", x);
+        #if SA_COMPRESSION
+        if(th->get_sa_entry_compressed(x) == 0) {
+            th->sentinel_index = x;
+            break;
+        }
+        #else
+        if(th->get_sa_entry(x) == 0) {
+            th->sentinel_index = x;
+            break;
+        }
+        #endif
+    }
+    th->info("\nsentinel_index: %ld\n", x);
+    #endif
+
+    th->info("* Count:\n");
+    for(x = 0; x < 5; x++)
+        th->info("%ld,\t%lu\n", x, (unsigned long)th->count[x]);
+    fprintf(stderr, "\n");
+
+    th->info("* Reading other elements of the index from files %s\n", ref_file_name);
+    th->bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 1);
+
+    fprintf(stderr, "* Done reading Index!!\n");
+    return NULL;
+}
+
+void FMI_search::init_mmap_index()
+{
+    if (pthread_create(&mmap_thread_id, NULL, &mmap_index_alarm, this))
+	{
+		fprintf(stderr, "Error creating mmap thread\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
+void FMI_search::wait_mmap_index()
+{
+    (void)pthread_join(mmap_thread_id, NULL);
 }
 
 void FMI_search::mmap_index()
