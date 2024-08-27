@@ -104,7 +104,7 @@ void *mmap_index_alarm(void *arg);
 class FMI_search: public indexEle
 {
     public:
-    FMI_search(const char *fname, int _use_mmap);
+    FMI_search(const char *fname, int _use_mmap, int _verbose);
     ~FMI_search();
     //int64_t beCalls;
 
@@ -190,6 +190,7 @@ class FMI_search: public indexEle
     void init_mmap_index(void);
 	void wait_mmap_index(void);
 private:
+    int verbose;
     void info(const char *format, ...);
     void error(const char *format, ...);
     char file_name[PATH_MAX];

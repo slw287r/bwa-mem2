@@ -55,7 +55,8 @@ void FMI_search::info(const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);
-    vfprintf(stderr, format, ap);
+    if (verbose >= 3)
+        vfprintf(stderr, format, ap);
     va_end(ap);
 }
 
@@ -63,14 +64,16 @@ void FMI_search::error(const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);
-    vfprintf(stderr, format, ap);
+    if (verbose >= 1)
+        vfprintf(stderr, format, ap);
     va_end(ap);
     exit(EXIT_FAILURE);
 }
 
-FMI_search::FMI_search(const char *fname, int _use_mmap)
+FMI_search::FMI_search(const char *fname, int _use_mmap, int _verbose)
 {
-    fprintf(stderr, "* Entering FMI_search\n");
+    verbose = _verbose;
+    info("* Entering FMI_search\n");
     //strcpy(file_name, fname);
     strcpy_s(file_name, PATH_MAX, fname);
     reference_seq_len = 0;
@@ -177,7 +180,7 @@ int FMI_search::build_fm_index(
         int64_t ref_seq_len,
         int64_t *sa_bwt,
         int64_t *count) {
-    printf("ref_seq_len = %ld\n", ref_seq_len);
+    info("ref_seq_len = %ld\n", ref_seq_len);
     fflush(stdout);
 
     char outname[PATH_MAX];
@@ -187,7 +190,7 @@ int FMI_search::build_fm_index(
     std::fstream outstream(outname, std::ios::out | std::ios::binary);
     outstream.seekg(0);
 
-    printf("count = %ld, %ld, %ld, %ld, %ld\n", count[0], count[1], count[2], count[3], count[4]);
+    info("count = %ld, %ld, %ld, %ld, %ld\n", count[0], count[1], count[2], count[3], count[4]);
     fflush(stdout);
 
     uint8_t *bwt;
@@ -209,7 +212,7 @@ int FMI_search::build_fm_index(
         if(sa_bwt[i] == 0)
         {
             bwt[i] = 4;
-            printf("BWT[%ld] = 4\n", i);
+            info("BWT[%ld] = 4\n", i);
             sentinel_index = i;
         }
         else
@@ -234,8 +237,8 @@ int FMI_search::build_fm_index(
     for(i = ref_seq_len; i < ref_seq_len_aligned; i++)
         bwt[i] = DUMMY_CHAR; // 6
 
-    printf("CP_SHIFT = %d, CP_MASK = %d\n", CP_SHIFT, CP_MASK);
-    printf("sizeof CP_OCC = %ld\n", sizeof(CP_OCC));
+    info("CP_SHIFT = %d, CP_MASK = %d\n", CP_SHIFT, CP_MASK);
+    info("sizeof CP_OCC = %ld\n", sizeof(CP_OCC));
     fflush(stdout);
     // create checkpointed occ
     int64_t cp_occ_size = (ref_seq_len >> CP_SHIFT) + 1;
@@ -298,7 +301,7 @@ int FMI_search::build_fm_index(
             pos++;
         }
     }
-    fprintf(stderr, "pos: %d, ref_seq_len__: %ld\n", pos, ref_seq_len >> SA_COMPX);
+    info("pos: %d, ref_seq_len__: %ld\n", pos, ref_seq_len >> SA_COMPX);
     outstream.write((char*)sa_ms_byte, ((ref_seq_len >> SA_COMPX) + 1) * sizeof(int8_t));
     outstream.write((char*)sa_ls_word, ((ref_seq_len >> SA_COMPX) + 1) * sizeof(uint32_t));
 
@@ -322,7 +325,7 @@ int FMI_search::build_fm_index(
 
     outstream.write((char *)(&sentinel_index), 1 * sizeof(int64_t));
     outstream.close();
-    printf("max_occ_ind = %ld\n", i >> CP_SHIFT);
+    info("max_occ_ind = %ld\n", i >> CP_SHIFT);
     fflush(stdout);
 
     _mm_free(sa_ms_byte);
@@ -355,7 +358,7 @@ int FMI_search::build_index() {
     //sprintf(binary_ref_name, "%s.0123", prefix);
     std::fstream binary_ref_stream (binary_ref_name, std::ios::out | std::ios::binary);
     binary_ref_stream.seekg(0);
-    fprintf(stderr, "init ticks = %llu\n", __rdtsc() - startTick);
+    info("init ticks = %llu\n", __rdtsc() - startTick);
     startTick = __rdtsc();
     int64_t i, count[16];
     memset(count, 0, sizeof(int64_t) * 16);
@@ -385,9 +388,9 @@ int FMI_search::build_index() {
     count[2]=count[0]+count[1];
     count[1]=count[0];
     count[0]=0;
-    fprintf(stderr, "ref seq len = %ld\n", pac_len);
+    info("ref seq len = %ld\n", pac_len);
     binary_ref_stream.write(binary_ref_seq, pac_len * sizeof(char));
-    fprintf(stderr, "binary seq ticks = %llu\n", __rdtsc() - startTick);
+    info("binary seq ticks = %llu\n", __rdtsc() - startTick);
     startTick = __rdtsc();
 
     size = (pac_len + 2) * sizeof(int64_t);
@@ -398,11 +401,11 @@ int FMI_search::build_index() {
     //status = saisxx<const char *, int64_t *, int64_t>(reference_seq.c_str(), suffix_array + 1, pac_len, 4);
     status = saisxx(reference_seq.c_str(), suffix_array + 1, pac_len);
     suffix_array[0] = pac_len;
-    fprintf(stderr, "build suffix-array ticks = %llu\n", __rdtsc() - startTick);
+    info("build suffix-array ticks = %llu\n", __rdtsc() - startTick);
     startTick = __rdtsc();
 
     build_fm_index(prefix, binary_ref_seq, pac_len, suffix_array, count);
-    fprintf(stderr, "build fm-index ticks = %llu\n", __rdtsc() - startTick);
+    info("build fm-index ticks = %llu\n", __rdtsc() - startTick);
     _mm_free(binary_ref_seq);
     _mm_free(suffix_array);
     return 0;
@@ -477,7 +480,7 @@ void FMI_search::load_index()
     sentinel_index = -1;
     #if SA_COMPRESSION
     err_fread_noeof(&sentinel_index, sizeof(int64_t), 1, cpstream);
-    fprintf(stderr, "* sentinel-index: %ld\n", sentinel_index);
+    info("* sentinel-index: %ld\n", sentinel_index);
     #endif
     fclose(cpstream);
 
@@ -498,18 +501,18 @@ void FMI_search::load_index()
         }
         #endif
     }
-    fprintf(stderr, "\nsentinel_index: %ld\n", x);    
+    info("\nsentinel_index: %ld\n", x);    
     #endif
 
-    fprintf(stderr, "* Count:\n");
+    info("* Count:\n");
     for(x = 0; x < 5; x++)
-        fprintf(stderr, "%ld,\t%lu\n", x, (unsigned long)count[x]);
-    fprintf(stderr, "\n");  
+        info("%ld,\t%lu\n", x, (unsigned long)count[x]);
+    info("\n");  
 
-    fprintf(stderr, "* Reading other elements of the index from files %s\n", ref_file_name);
+    info("* Reading other elements of the index from files %s\n", ref_file_name);
     bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 0);
 
-    fprintf(stderr, "* Done reading Index!!\n");
+    info("* Done reading Index!!\n");
 }
 
 void *mmap_index_alarm(void *arg)
@@ -569,7 +572,7 @@ void *mmap_index_alarm(void *arg)
     th->sentinel_index = -1;
     #if SA_COMPRESSION
     memcpy_s(&th->sentinel_index, sizeof(int64_t), p, sizeof(int64_t));
-    fprintf(stderr, "* sentinel-index: %ld\n", th->sentinel_index);
+    th->info("* sentinel-index: %ld\n", th->sentinel_index);
     #endif
 
     int64_t x;
@@ -595,12 +598,12 @@ void *mmap_index_alarm(void *arg)
     th->info("* Count:\n");
     for(x = 0; x < 5; x++)
         th->info("%ld,\t%lu\n", x, (unsigned long)th->count[x]);
-    fprintf(stderr, "\n");
+    th->info("\n");
 
     th->info("* Reading other elements of the index from files %s\n", ref_file_name);
     th->bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 1);
 
-    fprintf(stderr, "* Done reading Index!!\n");
+    th->info("* Done reading Index!!\n");
     return NULL;
 }
 
@@ -608,7 +611,7 @@ void FMI_search::init_mmap_index()
 {
     if (pthread_create(&mmap_thread_id, NULL, &mmap_index_alarm, this))
 	{
-		fprintf(stderr, "Error creating mmap thread\n");
+		error("Error creating mmap thread\n");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -674,7 +677,7 @@ void FMI_search::mmap_index()
     sentinel_index = -1;
     #if SA_COMPRESSION
     memcpy_s(&sentinel_index, sizeof(int64_t), p, sizeof(int64_t));
-    fprintf(stderr, "* sentinel-index: %ld\n", sentinel_index);
+    info("* sentinel-index: %ld\n", sentinel_index);
     #endif
 
     int64_t x;
@@ -700,12 +703,12 @@ void FMI_search::mmap_index()
     info("* Count:\n");
     for(x = 0; x < 5; x++)
         info("%ld,\t%lu\n", x, (unsigned long)count[x]);
-    fprintf(stderr, "\n");  
+    info("\n");  
 
     info("* Reading other elements of the index from files %s\n", ref_file_name);
     bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 1);
 
-    fprintf(stderr, "* Done reading Index!!\n");
+    info("* Done reading Index!!\n");
 }
 
 void FMI_search::unmap_index()

@@ -382,13 +382,13 @@ void *mmap_file(const char *fn, int64_t size)
     //              system can't quite fit the reference the call to mmap will succeed but aligning
     //              will take forever as parts of the reference are evicted and/or reloaded from disk.
     int map_flags = MAP_FLAGS;
-    fprintf(stderr, "* mmapping file %s (%0.1fMB)\n", fn, ((double)st_size) / (1024*1024));
+    //fprintf(stderr, "* mmapping file %s (%0.1fMB)\n", fn, ((double)st_size) / (1024*1024));
     void* m = mmap(0, st_size, PROT_READ, map_flags, fd, 0);
     if (m == MAP_FAILED) {
         perror(__func__);
         err_fatal("Failed to map %s file to memory\n", fn);
     }
-    fprintf(stderr, "* File %s locked in memory\n", fn);
+    //fprintf(stderr, "* File %s locked in memory\n", fn);
     close(fd);
     // MADV_WILLNEED:  Expect access in the near future
     madvise(m, st_size, MADV_WILLNEED);

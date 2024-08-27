@@ -120,9 +120,11 @@ void memoryAlloc(ktp_aux_t *aux, worker_t &w, int32_t nreads, int32_t nthreads)
     int64_t allocMem = memSize * sizeof(mem_alnreg_v) +
         memSize * sizeof(mem_chain_v) +
         sizeof(mem_seed_t) * memSize * AVG_SEEDS_PER_READ;
-    fprintf(stderr, "----------------------------------------------------\n");
-    fprintf(stderr, "1. Memory pre-allocation for Chaining: %0.4lf MB\n", allocMem/1e6);
-
+    if (bwa_verbose >= 3)
+    {
+        fprintf(stderr, "----------------------------------------------------\n");
+        fprintf(stderr, "1. Memory pre-allocation for Chaining: %0.4lf MB\n", allocMem/1e6);
+    }
     
     /* SWA mem allocation */
     int64_t wsize = BATCH_SIZE * SEEDS_PER_READ;
@@ -161,7 +163,8 @@ void memoryAlloc(ktp_aux_t *aux, worker_t &w, int32_t nreads, int32_t nthreads)
     allocMem = (wsize * MAX_SEQ_LEN_REF * sizeof(int8_t) + MAX_LINE_LEN) * opt->n_threads * 2+
         (wsize * MAX_SEQ_LEN_QER * sizeof(int8_t) + MAX_LINE_LEN) * opt->n_threads  * 2 +       
         wsize * sizeof(SeqPair) * opt->n_threads * 3;   
-    fprintf(stderr, "2. Memory pre-allocation for BSW: %0.4lf MB\n", allocMem/1e6);
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "2. Memory pre-allocation for BSW: %0.4lf MB\n", allocMem/1e6);
 
     for (int l=0; l<nthreads; l++)
     {
@@ -179,8 +182,11 @@ void memoryAlloc(ktp_aux_t *aux, worker_t &w, int32_t nreads, int32_t nthreads)
         nthreads * BATCH_MUL * BATCH_SIZE * readLen *sizeof(int16_t) +
         nthreads * BATCH_MUL * BATCH_SIZE * readLen *sizeof(int32_t) +
         nthreads * (BATCH_SIZE + 32) * sizeof(int32_t);
-    fprintf(stderr, "3. Memory pre-allocation for BWT: %0.4lf MB\n", allocMem/1e6);
-    fprintf(stderr, "----------------------------------------------------\n");
+    if (bwa_verbose >= 3)
+	{
+        fprintf(stderr, "3. Memory pre-allocation for BWT: %0.4lf MB\n", allocMem/1e6);
+        fprintf(stderr, "----------------------------------------------------\n");
+    }
 }
 ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, worker_t &w)
 {
@@ -202,8 +208,9 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
 
         tprof[READ_IO][0] += __rdtsc() - tim;
         
-        fprintf(stderr, "[0000] read_chunk: %ld, work_chunk_size: %ld, nseq: %d\n",
-                aux->task_size, sz, ret->n_seqs);   
+        if (bwa_verbose >= 3)
+            fprintf(stderr, "[0000] read_chunk: %ld, work_chunk_size: %ld, nseq: %d\n",
+                    aux->task_size, sz, ret->n_seqs);   
 
         if (ret->seqs == 0) {
             free(ret);
@@ -219,8 +226,9 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
             int64_t size = 0;
             for (int i = 0; i < ret->n_seqs; ++i) size += ret->seqs[i].l_seq;
 
-            fprintf(stderr, "\t[0000][ M::%s] read %d sequences (%ld bp)...\n",
-                    __func__, ret->n_seqs, (long)size);
+            if (bwa_verbose >= 3)
+                fprintf(stderr, "\t[0000][ M::%s] read %d sequences (%ld bp)...\n",
+                        __func__, ret->n_seqs, (long)size);
         }
                 
         return ret;
@@ -230,7 +238,8 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
         static int task = 0;
         if (w.nreads < ret->n_seqs)
         {
-            fprintf(stderr, "[0000] Reallocating initial memory allocations!!\n");
+            if (bwa_verbose >= 3)
+                fprintf(stderr, "[0000] Reallocating initial memory allocations!!\n");
             free(w.regs); free(w.chain_ar); free(w.seedBuf);
             w.nreads = ret->n_seqs;
             w.regs = (mem_alnreg_v *) calloc(w.nreads, sizeof(mem_alnreg_v));
@@ -239,7 +248,8 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
             assert(w.regs != NULL); assert(w.chain_ar != NULL); assert(w.seedBuf != NULL);
         }       
                                 
-        fprintf(stderr, "[0000] Calling mem_process_seqs.., task: %d\n", task++);
+        if (bwa_verbose >= 3)
+            fprintf(stderr, "[0000] Calling mem_process_seqs.., task: %d\n", task++);
 
         uint64_t tim = __rdtsc();
         if (opt->flag & MEM_F_SMARTPE)
@@ -250,8 +260,9 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
 
             bseq_classify(ret->n_seqs, ret->seqs, n_sep, sep);
 
-            fprintf(stderr, "[M::%s] %d single-end sequences; %d paired-end sequences.....\n",
-                    __func__, n_sep[0], n_sep[1]);
+            if (bwa_verbose >= 3)
+                fprintf(stderr, "[M::%s] %d single-end sequences; %d paired-end sequences.....\n",
+                        __func__, n_sep[0], n_sep[1]);
             
             if (n_sep[0]) {
                 tmp_opt.flag &= ~MEM_F_PE;
@@ -373,7 +384,8 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
     int tc = numa_num_task_cpus();
     int tn = numa_num_task_nodes();
     int tcc = numa_num_configured_cpus();
-    fprintf(stderr, "num_cpus: %d, num_numas: %d, configured cpus: %d\n", tc, tn, tcc);
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "num_cpus: %d, num_numas: %d, configured cpus: %d\n", tc, tn, tcc);
     int ht = HTStatus();
     if (ht) deno = 2;
     
@@ -455,7 +467,8 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
     
     /* All memory allocation */
     memoryAlloc(aux, w, nreads, nthreads);
-    fprintf(stderr, "* Threads used (compute): %d\n", nthreads);
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "* Threads used (compute): %d\n", nthreads);
     
     /* pipeline using pthreads */
     ktp_t aux_;
@@ -476,7 +489,8 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
     pthread_ret = pthread_cond_init(&aux_.cv, 0);
     assert(pthread_ret == 0);
 
-    fprintf(stderr, "* No. of pipeline threads: %d\n\n", p_nt);
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "* No. of pipeline threads: %d\n\n", p_nt);
     aux_.workers = (ktp_worker_t*) malloc(p_nt * sizeof(ktp_worker_t));
     assert(aux_.workers != NULL);
     
@@ -507,7 +521,8 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
     free(aux_.workers);
     /***** pipeline ends ******/
     
-    fprintf(stderr, "[0000] Computation ends..\n");
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "[0000] Computation ends..\n");
     
     /* Dealloc memory allcoated in the header section */    
     free(w.chain_ar);
@@ -557,7 +572,7 @@ static void update_a(mem_opt_t *opt, const mem_opt_t *opt0)
 
 static void usage(const mem_opt_t *opt)
 {
-    fprintf(stderr, "Usage: bwa-mem2 mem [options] <idxbase> <in1.fq> [in2.fq]\n");
+    fprintf(stderr, "Usage: \033[31m%s\033[0m mem [options] <idxbase> <in1.fq> [in2.fq]\n", __progname);
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  Algorithm options:\n");
     fprintf(stderr, "    -o STR        Output SAM file name\n");
@@ -607,7 +622,7 @@ static void usage(const mem_opt_t *opt)
     fprintf(stderr, "                 FR orientation only. [inferred]\n");
     fprintf(stderr, "   -l INT        maximum expected read length, needed for memory allocation [%d]\n", opt->max_read_length);
     fprintf(stderr, "   -z            use MMAP to access reference structures\n");
-    fprintf(stderr, "   -Z            kill MMAP (via -z) if it falls into zzZ state [unlimited]\n");
+    fprintf(stderr, "   -Z INT        kill \033[31m%s\033[0m mem in case MMAP (via -z) lasts for more than INT minutes [unlimited]\n", __progname);
     fprintf(stderr, "Note: Please read the man page for detailed description of the command line and options.\n");
 }
 
@@ -801,7 +816,7 @@ int main_mem(int argc, char *argv[])
     /* Further input parsing */
     if (mode)
     {
-        fprintf(stderr, "WARNING: bwa-mem2 doesn't work well with long reads or contigs; please use minimap2 instead.\n");
+        fprintf(stderr, "WARNING: \033[31m%s\033[0m doesn't work well with long reads or contigs; please use minimap2 instead.\n", __progname);
         if (strcmp(mode, "intractg") == 0)
         {
             if (!opt0.o_del) opt->o_del = 16;
@@ -867,7 +882,8 @@ int main_mem(int argc, char *argv[])
     /* Load bwt2/FMI index */
     uint64_t tim = __rdtsc();
     
-    fprintf(stderr, "* Ref file: %s\n", argv[optind]);
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "* Ref file: %s\n", argv[optind]);
     /* check for max locked memory */
     char *bwt;
     asprintf(&bwt, "%s.bwt.2bit.64", argv[optind]);
@@ -888,7 +904,7 @@ int main_mem(int argc, char *argv[])
         }
     }
 	*/
-    aux.fmi = new FMI_search(argv[optind], opt->use_mmap);
+    aux.fmi = new FMI_search(argv[optind], opt->use_mmap, bwa_verbose);
     if (opt->use_mmap)
     {
         if (opt->mmap_timeout == INT_MAX)
@@ -907,13 +923,15 @@ int main_mem(int argc, char *argv[])
 
     // reading ref string from the file
     tim = __rdtsc();
-    fprintf(stderr, "* Reading reference genome..\n");
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "* Reading reference genome..\n");
 
     char binary_seq_file[PATH_MAX];
     strcpy_s(binary_seq_file, PATH_MAX, argv[optind]);
     strcat_s(binary_seq_file, PATH_MAX, ".0123");
 
-    fprintf(stderr, "* Binary seq file = %s\n", binary_seq_file);
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "* Binary seq file = %s\n", binary_seq_file);
     int64_t rlen = 0;
     if (aux.opt->use_mmap)
     {
@@ -951,8 +969,11 @@ int main_mem(int argc, char *argv[])
 
         fclose(fr);
     }
-    fprintf(stderr, "* Reference genome size: %ld bp\n", rlen);
-    fprintf(stderr, "* Done reading reference genome!!\n\n");
+    if (bwa_verbose >= 3)
+    {
+        fprintf(stderr, "* Reference genome size: %ld bp\n", rlen);
+        fprintf(stderr, "* Done reading reference genome!!\n\n");
+    }
 
     if (ignore_alt)
         for (i = 0; i < aux.fmi->idx->bns->n_seqs; ++i)

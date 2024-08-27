@@ -39,6 +39,7 @@
 #include "bwt.h"
 #include "utils.h"
 #include "FMI_search.h"
+extern const char *__progname;
 
 int bwa_index(int argc, char *argv[]) // the "index" command
 {
@@ -50,7 +51,7 @@ int bwa_index(int argc, char *argv[]) // the "index" command
     }
 
     if (optind + 1 > argc) {
-        fprintf(stderr, "Usage: bwa-mem2 index [-p prefix] <in.fasta>\n");
+        fprintf(stderr, "Usage: \033[31m%s\033[0m index [-p prefix] <in.fasta>\n", __progname);
         return 1;
     }
     if (prefix == 0) prefix = argv[optind];
@@ -72,7 +73,7 @@ int bwa_idx_build(const char *fa, const char *prefix)
         l_pac = bns_fasta2bntseq(fp, prefix, 1);
         fprintf(stderr, "%.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
         err_gzclose(fp);
-        FMI_search *fmi = new FMI_search(prefix, 0);
+        FMI_search *fmi = new FMI_search(prefix, 0, 0);
         fmi->build_index();
         delete fmi;
     }

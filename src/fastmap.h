@@ -53,7 +53,7 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #include "kseq.h"
 #include "profiling.h"
 
-
+extern const char *__progname;
 KSEQ_DECLARE(gzFile)
 
 typedef struct {
