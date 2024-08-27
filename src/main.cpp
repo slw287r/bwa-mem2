@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "* SA compression enabled with xfactor: %d\n", 0x1 << SA_COMPX);
         #endif
         
-        ksprintf(&pg, "@PG\tID:%s\tPN:%s\tVN:%s\tCL:%s", PACKAGE_VERSION, argv[0], __progname, __progname);
+        ksprintf(&pg, "@PG\tID:%s\tPN:%s\tVN:%s\tCL:%s", __progname, __progname, PACKAGE_VERSION, argv[0]);
 
         for (int i = 1; i < argc; ++i) ksprintf(&pg, " %s", argv[i]);
         ksprintf(&pg, "\n");

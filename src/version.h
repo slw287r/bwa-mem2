@@ -1,5 +1,5 @@
 #ifndef PACKAGE_VERSION
-#define PACKAGE_VERSION "2.2.1"
+#define PACKAGE_VERSION "2.2.1d"
 #endif
 
 #undef BRANCH_COMMIT
