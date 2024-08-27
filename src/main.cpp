@@ -31,11 +31,6 @@ Contacts: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@
 // ----------------------------------
 #include "main.h"
 
-#ifndef PACKAGE_VERSION
-#define PACKAGE_VERSION "2.2.1d"
-#endif
-
-
 // ----------------------------------
 uint64_t proc_freq, tprof[LIM_R][LIM_C], prof[LIM_R];
 // ----------------------------------
@@ -106,7 +101,7 @@ int main(int argc, char* argv[])
     else if (!strcmp(argv[1], "version") || !memcmp(argv[1], "-v", 2) ||
             !memcmp(argv[1], "--v", 3))
     {
-        puts(PACKAGE_VERSION);
+        fprintf(stdout, "%s (%s)\n", PACKAGE_VERSION, BRANCH_COMMIT);
         return 0;
     } else {
         fprintf(stderr, "ERROR: unknown command '%s'\n", argv[1]);

@@ -39,6 +39,7 @@ Contacts: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@
 #include "bandedSWA.h"
 #include "profiling.h"
 #include "fastmap.h"
+#include "version.h"
 
 extern const char *__progname;
 int bwa_index(int argc, char *argv[]);
