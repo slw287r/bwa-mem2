@@ -332,7 +332,7 @@ int64_t get_memory()
 #ifdef __linux__
 	mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
 #elif defined __APPLE__
-    int64_t len = sizeof(mem);
+    size_t len = sizeof(mem);
     sysctlbyname("hw.memsize", &mem, &len, NULL, 0);
 #endif
     return mem;
