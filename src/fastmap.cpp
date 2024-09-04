@@ -572,7 +572,7 @@ static void update_a(mem_opt_t *opt, const mem_opt_t *opt0)
 
 static void usage(const mem_opt_t *opt)
 {
-    fprintf(stderr, "Usage: \033[31m%s\033[0m mem [options] <idxbase> <in1.fq> [in2.fq]\n", __progname);
+    fprintf(stderr, "Usage: \033[31mbwa-mem2\033[0m mem [options] <idxbase> <in1.fq> [in2.fq]\n");
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  Algorithm options:\n");
     fprintf(stderr, "    -o STR        Output SAM file name\n");
@@ -622,7 +622,7 @@ static void usage(const mem_opt_t *opt)
     fprintf(stderr, "                 FR orientation only. [inferred]\n");
     fprintf(stderr, "   -l INT        maximum expected read length, needed for memory allocation [%d]\n", opt->max_read_length);
     fprintf(stderr, "   -z            use MMAP to access reference structures\n");
-    fprintf(stderr, "   -Z INT        time out \033[31m%s\033[0m mem in case MMAP (via -z) hangs for more than INT minutes []\n", __progname);
+    fprintf(stderr, "   -Z INT        time out \033[31mbwa-mem2\033[0m mem in case MMAP (via -z) hangs for more than INT minutes []\n");
     fprintf(stderr, "Note: Please read the man page for detailed description of the command line and options.\n");
 }
 
@@ -816,7 +816,7 @@ int main_mem(int argc, char *argv[])
     /* Further input parsing */
     if (mode)
     {
-        fprintf(stderr, "WARNING: \033[31m%s\033[0m doesn't work well with long reads or contigs; please use minimap2 instead.\n", __progname);
+        fprintf(stderr, "WARNING: \033[31mbwa-mem2\033[0m doesn't work well with long reads or contigs; please use \033[31mminimap2\033[0m instead.\n");
         if (strcmp(mode, "intractg") == 0)
         {
             if (!opt0.o_del) opt->o_del = 16;

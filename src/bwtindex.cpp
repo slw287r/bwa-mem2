@@ -39,7 +39,6 @@
 #include "bwt.h"
 #include "utils.h"
 #include "FMI_search.h"
-extern const char *__progname;
 
 int bwa_index(int argc, char *argv[]) // the "index" command
 {
@@ -51,7 +50,7 @@ int bwa_index(int argc, char *argv[]) // the "index" command
     }
 
     if (optind + 1 > argc) {
-        fprintf(stderr, "Usage: \033[31m%s\033[0m index [-p prefix] <in.fasta>\n", __progname);
+        fprintf(stderr, "Usage: \033[31mbwa-mem2\033[0m index [-p prefix] <in.fasta>\n");
         return 1;
     }
     if (prefix == 0) prefix = argv[optind];
