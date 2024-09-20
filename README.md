@@ -1,8 +1,9 @@
 [![GitHub Downloads](https://img.shields.io/github/downloads/bwa-mem2/bwa-mem2/total?label=GitHub%20Downloads)](https://github.com/bwa-mem2/bwa-mem2/releases)
 [![BioConda Install](https://img.shields.io/conda/dn/bioconda/bwa-mem2?label=BioConda%20Installs)](https://anaconda.org/bioconda/bwa-mem2)
 
-## About this branch (mmap)
+## About this branch (mmap-izlib)
 
+> **Note**
 > <a href="https://github.com/bwa-mem2/bwa-mem2/issues/120#issuecomment-821811683">#120</a>
 >
 > I managed to port the mmap feature brought into bwa by Luca Pireddu (https://github.com/ilveroluca/bwa/tree/mmap.rebase) to [bwa-mem2](https://github.com/slw287r/bwa-mem2/tree/mmap) (https://github.com/slw287r/bwa-mem2/tree/mmap).
@@ -10,10 +11,13 @@
 > <img src="https://user-images.githubusercontent.com/4134899/115111547-740e7900-9fb3-11eb-87fa-d1717a530b49.png" width="50%">
 >
 > It did lower the ram usage by sharing the index files in cache (16.1G), via the `-z` option:
+> ```
+> bwa-mem2 mem -z -t8 <ref.fa> <in.fq.gz> > out.sam
+> ```
 
-```
-bwa-mem2 mem -z -t8 <ref.fa> <in.fq.gz> > out.sam
-```
+> **Note**
+> Using intel's isa-l lib (via the [izlib API](https://github.com/slw287r/izlib)) speed up the aligning process by ~30%  depending on the size of gzipped fastq input.
+
 
 ## Important Information
 
