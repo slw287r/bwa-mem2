@@ -4,6 +4,7 @@
 ## About this branch (mmap-izlib)
 
 > **Note**
+>
 > <a href="https://github.com/bwa-mem2/bwa-mem2/issues/120#issuecomment-821811683">#120</a>
 >
 > I managed to port the mmap feature brought into bwa by Luca Pireddu (https://github.com/ilveroluca/bwa/tree/mmap.rebase) to [bwa-mem2](https://github.com/slw287r/bwa-mem2/tree/mmap) (https://github.com/slw287r/bwa-mem2/tree/mmap).
@@ -16,6 +17,7 @@
 > ```
 
 > **Note**
+>
 > Using intel's isa-l lib (via the [izlib API](https://github.com/slw287r/izlib)) speed up the aligning process by ~30%  depending on the size of gzipped fastq input.
 
 
