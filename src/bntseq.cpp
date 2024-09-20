@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zlib.h>
+#include "izlib.h"
 #include <unistd.h>
 #include <errno.h>
 #include <limits.h>
@@ -383,7 +383,7 @@ int bwa_fa2pac(int argc, char *argv[])
     }
     fp = xzopen(argv[optind], "r");
     bns_fasta2bntseq(fp, (optind+1 < argc)? argv[optind+1] : argv[optind], for_only);
-    err_gzclose(fp);
+    gzclose(fp);
     return 0;
 }
 

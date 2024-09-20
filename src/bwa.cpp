@@ -30,7 +30,7 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 
 #include <string.h>
 #include <stdio.h>
-#include <zlib.h>
+#include "izlib.h"
 #include <assert.h>
 #include "bntseq.h"
 #include "bwa.h"

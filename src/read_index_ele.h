@@ -43,8 +43,6 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #define BWA_IDX_PAC 0x4
 #define BWA_IDX_ALL 0x7
 
-#define PP fprintf(stderr, "%s\t%d\t<%s>\n", __FILE__, __LINE__, __func__);
-
 typedef struct {
     bntseq_t *bns; // information on the reference sequences
     uint8_t  *pac; // the actual 2-bit encoded reference sequences with 'N' converted to a random base

@@ -680,7 +680,7 @@ int ksw_global(int qlen, const uint8_t *query, int tlen, const uint8_t *target, 
 
 #include <unistd.h>
 #include <stdio.h>
-#include <zlib.h>
+#include "izlib.h"
 #include "kseq.h"
 KSEQ_INIT(gzFile, err_gzread)
 

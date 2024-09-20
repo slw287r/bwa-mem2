@@ -32,7 +32,7 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #define FASTMAP_HPP
 
 #include <ctype.h>
-#include <zlib.h>
+#include "izlib.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>

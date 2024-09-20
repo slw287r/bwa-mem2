@@ -33,7 +33,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
-#include <zlib.h>
+#include "izlib.h"
 #include "bntseq.h"
 #include "bwa.h"
 #include "bwt.h"
@@ -71,7 +71,7 @@ int bwa_idx_build(const char *fa, const char *prefix)
         fprintf(stderr, "[bwa_index] Pack FASTA... ");
         l_pac = bns_fasta2bntseq(fp, prefix, 1);
         fprintf(stderr, "%.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
-        err_gzclose(fp);
+        gzclose(fp);
         FMI_search *fmi = new FMI_search(prefix, 0, 0);
         fmi->build_index();
         delete fmi;

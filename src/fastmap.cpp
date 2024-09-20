@@ -582,7 +582,7 @@ static void usage(const mem_opt_t *opt)
     fprintf(stderr, "    -d INT        off-diagonal X-dropoff [%d]\n", opt->zdrop);
     fprintf(stderr, "    -r FLOAT      look for internal seeds inside a seed longer than {-k} * FLOAT [%g]\n", opt->split_factor);
     fprintf(stderr, "    -y INT        seed occurrence for the 3rd round seeding [%ld]\n", (long)opt->max_mem_intv);
-    fprintf(stderr, "    -c INT        skip seeds with more than INT occurrences [%d]\n", opt->max_occ);
+    fprintf(stderr, "    -c INT        skip seeds with more than INT occurrences [%lld]\n", opt->max_occ);
     fprintf(stderr, "    -D FLOAT      drop chains shorter than FLOAT fraction of the longest overlapping chain [%.2f]\n", opt->drop_ratio);
     fprintf(stderr, "    -W INT        discard a chain if seeded bases shorter than INT [0]\n");
     fprintf(stderr, "    -m INT        perform at most INT rounds of mate rescues for each read [%d]\n", opt->max_matesw);
@@ -688,7 +688,7 @@ int main_mem(int argc, char *argv[])
         else if (c == 'V') opt->flag |= MEM_F_REF_HDR;
         else if (c == '5') opt->flag |= MEM_F_PRIMARY5 | MEM_F_KEEP_SUPP_MAPQ; // always apply MEM_F_KEEP_SUPP_MAPQ with -5
         else if (c == 'q') opt->flag |= MEM_F_KEEP_SUPP_MAPQ;
-        else if (c == 'c') opt->max_occ = atoi(optarg), opt0.max_occ = 1;
+        else if (c == 'c') opt->max_occ = atoll(optarg), opt0.max_occ = 1;
         else if (c == 'd') opt->zdrop = atoi(optarg), opt0.zdrop = 1;
         else if (c == 'v') bwa_verbose = atoi(optarg);
         else if (c == 'j') ignore_alt = 1;
@@ -1011,7 +1011,7 @@ int main_mem(int argc, char *argv[])
                 fprintf(stderr, "[E::%s] failed to open file `%s'.\n", __func__, argv[optind + 2]);
                 free(opt);
                 free(ko);
-                err_gzclose(fp);
+                gzclose(fp);
                 kseq_destroy(aux.ks);
                 if (is_o) 
                     fclose(aux.fp);
@@ -1051,12 +1051,12 @@ int main_mem(int argc, char *argv[])
     free(hdr_line);
     free(opt);
     kseq_destroy(aux.ks);   
-    err_gzclose(fp); kclose(ko);
+    gzclose(fp); kclose(ko);
 
     // PAIRED_END
     if (aux.ks2) {
         kseq_destroy(aux.ks2);
-        err_gzclose(fp2); kclose(ko2);
+        gzclose(fp2); kclose(ko2);
     }
     
     if (is_o) {

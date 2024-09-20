@@ -30,7 +30,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <zlib.h>
+#include "izlib.h"
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
@@ -39,6 +39,8 @@
 #include <string.h>
 #include <pwd.h>
 #include <sys/types.h>
+
+#define PP fprintf(stderr, "%s\t%d\t<%s>\n", __FILE__, __LINE__, __func__);
 
 #ifdef __linux__
 #include <sys/sysinfo.h>

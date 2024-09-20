@@ -32,7 +32,7 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #define BWA_H_
 
 #include <stdint.h>
-#include <zlib.h>
+#include "izlib.h"
 #include "bntseq.h"
 #include "bwt.h"
 #include "macro.h"

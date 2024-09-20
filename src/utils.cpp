@@ -30,7 +30,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zlib.h>
+#include "izlib.h"
 #include <errno.h>
 #ifdef FSYNC_ON_FLUSH
 #include <sys/types.h>
@@ -47,7 +47,7 @@ KSORT_INIT(128, pair64_t, pair64_lt)
 KSORT_INIT(64,  uint64_t, ks_lt_generic)
 
 #include "kseq.h"
-KSEQ_INIT2(, gzFile, err_gzread)
+KSEQ_INIT2(, gzFile, gzread)
 
 /********************
  * System utilities *
@@ -136,20 +136,6 @@ size_t err_fread_noeof(void *ptr, size_t size, size_t nmemb, FILE *stream)
     {
         _err_fatal_simple("fread", ferror(stream) ? strerror(errno) : "Unexpected end of file");
     }
-    return ret;
-}
-
-int err_gzread(gzFile file, void *ptr, unsigned int len)
-{
-    int ret = gzread(file, ptr, len);
-
-    if (ret < 0)
-    {
-        int errnum = 0;
-        const char *msg = gzerror(file, &errnum);
-        _err_fatal_simple("gzread", Z_ERRNO == errnum ? strerror(errno) : msg);
-    }
-
     return ret;
 }
 
@@ -272,17 +258,6 @@ int err_fclose(FILE *stream)
 {
     int ret = fclose(stream);
     if (ret != 0) _err_fatal_simple("fclose", strerror(errno));
-    return ret;
-}
-
-int err_gzclose(gzFile file)
-{
-    int ret = gzclose(file);
-    if (Z_OK != ret)
-    {
-        _err_fatal_simple("gzclose", Z_ERRNO == ret ? strerror(errno) : zError(ret));
-    }
-
     return ret;
 }
 

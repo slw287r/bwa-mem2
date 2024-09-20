@@ -879,7 +879,7 @@ void mem_chain_seeds(FMI_search *fmi, const mem_opt_t *opt,
             }
         } // seeds
 
-        smem_ptr = pos + 1;     
+        smem_ptr = pos + 1;
         size = kb_size(tree);
         // tprof[PE21][0] += kb_size(tree) * sizeof(mem_chain_t);
         
@@ -2251,7 +2251,7 @@ void mem_chain2aln_across_reads_V2(const mem_opt_t *opt, const bntseq_t *bns,
 
                     if (numPairsRight >= *wsize_pair)
                     {
-                        fprintf(stderr, "[0000] [%0.4d] Re-allocating seqPairArrays Right\n", tid);
+                        fprintf(stderr, "[0000][%0.4d] Re-allocating seqPairArrays, in Right\n", tid);
                         *wsize_pair += 1024;
                         seqPairArrayAux = (SeqPair *) realloc(seqPairArrayAux,
                                                               (*wsize_pair + MAX_LINE_LEN)
@@ -2798,8 +2798,9 @@ void mem_chain2aln_across_reads_V2(const mem_opt_t *opt, const bntseq_t *bns,
     {   // refine it!
         fprintf(stderr, "Error: Unexpected behaviour!!!\n");
         fprintf(stderr, "Error: assert failed for seqPair size, "
-                "numPairsLeft: %d, numPairsRight %d\nExiting.\n",
+                "numPairsLeft: %d, numPairsRight %d\n",
                 numPairsLeft, numPairsRight);
+        fprintf(stderr, "Error: Please apply -c to skip seeds with too much occurrences!!!\nExiting.\n");
         exit(EXIT_FAILURE);
     }
     /* Discard seeds and hence their alignemnts */
