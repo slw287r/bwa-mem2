@@ -333,15 +333,15 @@ int64_t max_locked_mem()
 void *mmap_file(const char *fn, int64_t size)
 {
     int fd = open(fn, O_RDONLY);
-    xassert(fd > -1, "Cannot open file");
+    xassert(fd > -1, "Error opening file");
 
     struct stat buf;
     int s = fstat(fd, &buf);
-    xassert(s > -1, "cannot stat file");
+    xassert(s > -1, "Error stating file");
 
     off_t st_size = buf.st_size;
     if (size > 0) {
-        xassert(st_size >= size, "bad file size");
+        xassert(st_size >= size, "Bad file size");
         st_size = size;
     }
 
@@ -361,7 +361,7 @@ void *mmap_file(const char *fn, int64_t size)
     void* m = mmap(0, st_size, PROT_READ, map_flags, fd, 0);
     if (m == MAP_FAILED) {
         perror(__func__);
-        err_fatal("Failed to map %s file to memory\n", fn);
+        err_fatal("Failed to map %s file to memory", fn);
     }
     //fprintf(stderr, "* File %s locked in memory\n", fn);
     close(fd);

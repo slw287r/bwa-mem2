@@ -49,9 +49,9 @@
 #endif
 
 #if defined(__APPLE__)
-    #define MAP_FLAGS MAP_PRIVATE | MAP_NORESERVE
+    #define MAP_FLAGS (MAP_PRIVATE | MAP_NORESERVE)
 #else
-    #define MAP_FLAGS MAP_PRIVATE | MAP_POPULATE | MAP_NORESERVE
+    #define MAP_FLAGS (MAP_PRIVATE | MAP_POPULATE | MAP_NORESERVE)
 #endif
 
 #ifdef __GNUC__
