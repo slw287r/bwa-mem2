@@ -374,7 +374,7 @@ void purge_cache()
 	uint64_t phys_mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
 	char purge_cmd[PATH_MAX];
 	char *home = realpath(dirname((char *)getauxval(AT_EXECFN)), 0);
-	snprintf(purge_cmd, PATH_MAX, "%s/purge %"PRIu64, home, phys_mem / GB(1) / 2);
+	snprintf(purge_cmd, PATH_MAX, "%s/purge %" PRIu64, home, phys_mem / GB(1) / 2);
     fprintf(stderr, "\033[31mPerform memory purging before exiting...\033[0m\n");
 	system(purge_cmd);
 	free(home);
@@ -386,7 +386,9 @@ void alarm_handler(int)
 	char commit_suicide[PATH_MAX];
 	snprintf(commit_suicide, PATH_MAX, "kill -9 %d &>/dev/null", getpid());
 	// purge cache
-	if (!nproc("purge"))
+	uint64_t phys_mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
+	uint64_t avphys_mem = sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE);
+	if (!nproc((char *)"purge") && avphys_mem * 3 < phys_mem)
 		purge_cache();
 	system(commit_suicide);
 	exit(EXIT_FAILURE);
