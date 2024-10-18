@@ -55,6 +55,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #ifdef STDC_HEADERS
 # include <ctype.h>
 # include <stddef.h>
