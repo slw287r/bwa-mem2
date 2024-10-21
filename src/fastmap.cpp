@@ -209,7 +209,7 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
         tprof[READ_IO][0] += __rdtsc() - tim;
         
         if (bwa_verbose >= 3)
-            fprintf(stderr, "[0000] read_chunk: %ld, work_chunk_size: %ld, nseq: %d\n",
+            fprintf(stderr, "[0000] read_chunk: %"PRId64", work_chunk_size: %"PRId64", nseq: %d\n",
                     aux->task_size, sz, ret->n_seqs);   
 
         if (ret->seqs == 0) {
@@ -582,7 +582,7 @@ static void usage(const mem_opt_t *opt)
     fprintf(stderr, "    -d INT        off-diagonal X-dropoff [%d]\n", opt->zdrop);
     fprintf(stderr, "    -r FLOAT      look for internal seeds inside a seed longer than {-k} * FLOAT [%g]\n", opt->split_factor);
     fprintf(stderr, "    -y INT        seed occurrence for the 3rd round seeding [%ld]\n", (long)opt->max_mem_intv);
-    fprintf(stderr, "    -c INT        skip seeds with more than INT occurrences [%lld]\n", opt->max_occ);
+    fprintf(stderr, "    -c INT        skip seeds with more than INT occurrences [%d]\n", opt->max_occ);
     fprintf(stderr, "    -D FLOAT      drop chains shorter than FLOAT fraction of the longest overlapping chain [%.2f]\n", opt->drop_ratio);
     fprintf(stderr, "    -W INT        discard a chain if seeded bases shorter than INT [0]\n");
     fprintf(stderr, "    -m INT        perform at most INT rounds of mate rescues for each read [%d]\n", opt->max_matesw);
@@ -971,7 +971,7 @@ int main_mem(int argc, char *argv[])
     }
     if (bwa_verbose >= 3)
     {
-        fprintf(stderr, "* Reference genome size: %ld bp\n", rlen);
+        fprintf(stderr, "* Reference genome size: %"PRId64" bp\n", rlen);
         fprintf(stderr, "* Done reading reference genome!!\n\n");
     }
 

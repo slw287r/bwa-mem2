@@ -111,6 +111,7 @@ void alarm_handler(int)
 	char commit_suicide[PATH_MAX];
 	snprintf(commit_suicide, PATH_MAX, "kill -9 %d &>/dev/null", getpid());
 	// purge cache
+#ifdef __linux__
 	uint64_t phys_mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
 	uint64_t avphys_mem = sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE);
 	int fd = open("/tmp/purge.lock", O_CREAT | O_RDWR, 0666);
@@ -122,6 +123,7 @@ void alarm_handler(int)
 		clean("/tmp/purge.lock");
 	}
 	close(fd);
+#endif
 	system(commit_suicide);
 	exit(EXIT_FAILURE);
 }
@@ -304,7 +306,7 @@ int FMI_search::build_fm_index(
                 case 3: bwt[i] = 3;
                     break;
                 default:
-                    fprintf(stderr, "ERROR! i = %ld, c = %c\n", i, c);
+                    fprintf(stderr, "ERROR! i = %"PRId64", c = %c\n", i, c);
                     exit(EXIT_FAILURE);
             }
         }
@@ -917,7 +919,7 @@ void FMI_search::getSMEMsOnePosOneThread(uint8_t *enc_qdb,
                              // fail before segfault
                              fprintf(
                                  stderr,
-                                 "Error: num smem (%ld) >= max smem (%ld), check max read length.\n",
+                                 "Error: num smem (%"PRId64") >= max smem (%"PRId64"), check max read length.\n",
                                  numTotalSmem,
                                  max_smem
                              );
@@ -972,7 +974,7 @@ void FMI_search::getSMEMsOnePosOneThread(uint8_t *enc_qdb,
                          // fail before segfault
                          fprintf(
                              stderr,
-                             "Error: num smem (%ld) >= max smem (%ld), check max read length.\n",
+                             "Error: num smem (%"PRId64") >= max smem (%"PRId64"), check max read length.\n",
                              numTotalSmem,
                              max_smem
                          );
@@ -1119,7 +1121,7 @@ int64_t FMI_search::bwtSeedStrategyAllPosOneThread(uint8_t *enc_qdb,
                                      // fail before segfault
                                      fprintf(
                                        stderr,
-                                       "Error: num smem (%ld) >= max smem (%ld), check max read length.\n",
+                                       "Error: num smem (%"PRId64") >= max smem (%"PRId64"), check max read length.\n",
                                        numTotalSeed,
                                        max_smem
                                      );
@@ -1640,7 +1642,7 @@ void FMI_search::get_sa_entries_prefetch(SMEM *smemArray, int64_t *coordArray,
         map_pos[j] = map_ar[i];
         offset[j] = 0;
         
-        if (pos & SA_COMPX_MASK == 0) {
+        if ((pos & SA_COMPX_MASK) == 0) {
             _mm_prefetch(&sa_ms_byte[pos >> SA_COMPX], _MM_HINT_T0);
             _mm_prefetch(&sa_ls_word[pos >> SA_COMPX], _MM_HINT_T0);
         }
@@ -1677,7 +1679,7 @@ void FMI_search::get_sa_entries_prefetch(SMEM *smemArray, int64_t *coordArray,
                     map_pos[k] = map_ar[i++];
                     offset[k] = 0;
                     
-                    if (pos & SA_COMPX_MASK == 0) {
+                    if ((pos & SA_COMPX_MASK) == 0) {
                         _mm_prefetch(&sa_ms_byte[pos >> SA_COMPX], _MM_HINT_T0);
                         _mm_prefetch(&sa_ls_word[pos >> SA_COMPX], _MM_HINT_T0);
                     }
@@ -1691,7 +1693,7 @@ void FMI_search::get_sa_entries_prefetch(SMEM *smemArray, int64_t *coordArray,
             }
             else {
                 working_set[k] = sp;
-                if (sp & SA_COMPX_MASK == 0) {
+                if ((sp & SA_COMPX_MASK) == 0) {
                     _mm_prefetch(&sa_ms_byte[sp >> SA_COMPX], _MM_HINT_T0);
                     _mm_prefetch(&sa_ls_word[sp >> SA_COMPX], _MM_HINT_T0);
                 }

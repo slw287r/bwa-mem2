@@ -103,10 +103,8 @@ int64_t BandedPairWiseSW::getTicks()
 {
     //printf("oneCount = %ld, totalCount = %ld\n", oneCount, totalCount);
     int64_t totalTicks = sort1Ticks + setupTicks + swTicks + sort2Ticks;
-    printf("cost breakup: %ld, %ld, %ld, %ld, %ld\n",
-            sort1Ticks, setupTicks, swTicks, sort2Ticks,
-            totalTicks);
-
+    printf("cost breakup: %"PRId64", %"PRId64", %"PRId64", %"PRId64", %"PRId64"\n",
+            sort1Ticks, setupTicks, swTicks, sort2Ticks, totalTicks);
     return totalTicks;
 }
 // ------------------------------------------------------------------------------------
