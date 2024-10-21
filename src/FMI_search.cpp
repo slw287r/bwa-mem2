@@ -306,7 +306,7 @@ int FMI_search::build_fm_index(
                 case 3: bwt[i] = 3;
                     break;
                 default:
-                    fprintf(stderr, "ERROR! i = %"PRId64 ", c = %c\n", i, c);
+                    fprintf(stderr, "ERROR! i = %" PRId64 ", c = %c\n", i, c);
                     exit(EXIT_FAILURE);
             }
         }
@@ -919,7 +919,7 @@ void FMI_search::getSMEMsOnePosOneThread(uint8_t *enc_qdb,
                              // fail before segfault
                              fprintf(
                                  stderr,
-                                 "Error: num smem (%"PRId64 ") >= max smem (%"PRId64 "), check max read length.\n",
+                                 "Error: num smem (%" PRId64 ") >= max smem (%" PRId64 "), check max read length.\n",
                                  numTotalSmem,
                                  max_smem
                              );
@@ -974,7 +974,7 @@ void FMI_search::getSMEMsOnePosOneThread(uint8_t *enc_qdb,
                          // fail before segfault
                          fprintf(
                              stderr,
-                             "Error: num smem (%"PRId64 ") >= max smem (%"PRId64 "), check max read length.\n",
+                             "Error: num smem (%" PRId64 ") >= max smem (%" PRId64 "), check max read length.\n",
                              numTotalSmem,
                              max_smem
                          );
@@ -1121,7 +1121,7 @@ int64_t FMI_search::bwtSeedStrategyAllPosOneThread(uint8_t *enc_qdb,
                                      // fail before segfault
                                      fprintf(
                                        stderr,
-                                       "Error: num smem (%"PRId64 ") >= max smem (%"PRId64 "), check max read length.\n",
+                                       "Error: num smem (%" PRId64 ") >= max smem (%" PRId64 "), check max read length.\n",
                                        numTotalSeed,
                                        max_smem
                                      );

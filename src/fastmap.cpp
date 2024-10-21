@@ -209,7 +209,7 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
         tprof[READ_IO][0] += __rdtsc() - tim;
         
         if (bwa_verbose >= 3)
-            fprintf(stderr, "[0000] read_chunk: %"PRId64 ", work_chunk_size: %"PRId64 ", nseq: %d\n",
+            fprintf(stderr, "[0000] read_chunk: %" PRId64 ", work_chunk_size: %" PRId64 ", nseq: %d\n",
                     aux->task_size, sz, ret->n_seqs);   
 
         if (ret->seqs == 0) {
@@ -971,7 +971,7 @@ int main_mem(int argc, char *argv[])
     }
     if (bwa_verbose >= 3)
     {
-        fprintf(stderr, "* Reference genome size: %"PRId64 " bp\n", rlen);
+        fprintf(stderr, "* Reference genome size: %" PRId64 " bp\n", rlen);
         fprintf(stderr, "* Done reading reference genome!!\n\n");
     }
 
