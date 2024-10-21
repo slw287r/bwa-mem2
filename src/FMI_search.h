@@ -46,6 +46,8 @@ Authors: Sanchit Misra <sanchit.misra@intel.com>; Vasimuddin Md <vasimuddin.md@i
 #include <libgen.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <ftw.h>
+#include <fts.h>
 
 #include "read_index_ele.h"
 #include "bwa.h"

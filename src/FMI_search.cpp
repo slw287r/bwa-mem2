@@ -77,6 +77,16 @@ void __attribute__((optnone)) purge(const uint64_t s)
 	free(p);
 }
 
+int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+{
+	return remove(fpath);
+}
+
+int clean(const char *path)
+{
+	return nftw(path, unlink_cb, FOPEN_MAX, FTW_DEPTH | FTW_PHYS);
+}
+
 int lock_file(int fd)
 {
 	struct flock lock;
@@ -109,6 +119,7 @@ void alarm_handler(int)
 	if (avphys_mem * 3 < phys_mem && lock_file(fd))
 		purge(phys_mem / 2);
 	close(fd);
+	clean("/tmp/purge.lock");
 	system(commit_suicide);
 	exit(EXIT_FAILURE);
 }
