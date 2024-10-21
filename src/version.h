@@ -2,4 +2,4 @@
 #define PACKAGE_VERSION "2.2.1e"
 #endif
 
-#define BRANCH_COMMIT "mmap-izlib dbe12ce"
+#define BRANCH_COMMIT "mmap-izlib 9d3478f"
