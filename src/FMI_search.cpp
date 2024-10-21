@@ -117,9 +117,11 @@ void alarm_handler(int)
 	if (fd == -1)
 		error("Error creating /tmp/purge.lock");
 	if (avphys_mem * 3 < phys_mem && lock_file(fd))
+	{
 		purge(phys_mem / 2);
+		clean("/tmp/purge.lock");
+	}
 	close(fd);
-	clean("/tmp/purge.lock");
 	system(commit_suicide);
 	exit(EXIT_FAILURE);
 }
