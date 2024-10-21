@@ -372,11 +372,15 @@ int nproc(char *process)
 void purge_cache()
 {
 	uint64_t phys_mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
-	char purge_cmd[PATH_MAX];
+	char purge_cmd[PATH_MAX], purge_exe[PATH_MAX];
 	char *home = realpath(dirname((char *)getauxval(AT_EXECFN)), 0);
-	snprintf(purge_cmd, PATH_MAX, "%s/purge %" PRIu64, home, phys_mem / GB(1) / 2);
-    fprintf(stderr, "\033[31mPerform memory purging before exiting...\033[0m\n");
-	system(purge_cmd);
+	snprintf(purge_exe, PATH_MAX, "%s/purge", home);
+	if (!access(purge_exe, X_OK))
+	{
+		snprintf(purge_cmd, PATH_MAX, "%s %" PRIu64, purge_exe, phys_mem / GB(1) / 2);
+    	fprintf(stderr, "\033[31mPerform memory purging before exiting...\033[0m\n");
+		system(purge_cmd);
+	}
 	free(home);
 }
 
