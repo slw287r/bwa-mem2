@@ -42,57 +42,16 @@ Authors: Sanchit Misra <sanchit.misra@intel.com>; Vasimuddin Md <vasimuddin.md@i
 #include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
-#include <signal.h>
-#include <dirent.h>
-#include <syslog.h>
 #include <stdarg.h>
 #include <libgen.h>
-#include <sys/auxv.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include "read_index_ele.h"
 #include "bwa.h"
 #include "utils.h"
 
 #define DUMMY_CHAR 6
-
-#define STATNAMELEN 15
-#define PIDOF_OMITSZ 5
-#define GB(x) ((size_t) (x) << 30)
-
-/* Info about a process. */
-typedef struct proc
-{
-	char *argv0;  /* Name as found out from argv[0] */
-	char *argv0base; /* `basename argv[1]` */
-	char *argv1;  /* Name as found out from argv[1] */
-	char *argv1base; /* `basename argv[1]` */
-	char *statname;  /* the statname without braces */
-	ino_t ino;  /* Inode number */
-	dev_t dev;  /* Device it is on */
-	pid_t pid;  /* Process ID. */
-	int sid;  /* Session ID. */
-	int kernel;  /* Kernel thread or zombie. */
-	struct proc *next; /* Pointer to next struct. */
-} PROC;
-
-/* pid queue */
-
-typedef struct pidq
-{
-	PROC *proc;
-	struct pidq *next;
-} PIDQ;
-
-typedef struct
-{
-	PIDQ *head;
-	PIDQ *tail;
-	PIDQ *next;
-} PIDQ_HEAD;
-int nproc(char *process);
 
 #define assert_not_null(x, size, cur_alloc) \
         if (x == NULL) { fprintf(stderr, "Allocation of %0.2lf GB for " #x " failed.\nCurrent Allocation = %0.2lf GB\n", size * 1.0 /(1024*1024*1024), cur_alloc * 1.0 /(1024*1024*1024)); exit(EXIT_FAILURE); }
@@ -101,7 +60,6 @@ int nproc(char *process);
 #define CP_FILENAME_SUFFIX ".bwt.2bit.64"
 #define CP_MASK 63
 #define CP_SHIFT 6
-
 
 typedef struct checkpoint_occ_scalar
 {
@@ -143,7 +101,10 @@ typedef struct
     int64_t count[5];
 } ref_t;
 
+void error(const char *format, ...);
+int lock_file(int fd);
 void alarm_handler(int);
+void purge(const uint64_t s);
 void *mmap_index_alarm(void *arg);
 
 class FMI_search: public indexEle

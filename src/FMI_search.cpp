@@ -46,342 +46,53 @@ extern "C" {
 }
 #endif
 
-/* List of processes. */
-PROC *plist;
-extern const char *__progname;
+void error(const char *format, ...)
+{
+	va_list ap;
+	va_start(ap, format);
+	fputs("\e[31m\xE2\x9C\x97\e[0m ", stderr);
+	vfprintf(stderr, format, ap);
+	fprintf(stderr, "%s\n", strerror(errno));
+	va_end(ap);
+	fflush(stderr);
+	exit(EXIT_FAILURE);
+}
 
-/* Did we stop all processes ? */
-int sent_sigstop;
-int scripts_too = 0;
-
-/* write to syslog file if not open terminal */
-#ifdef __GNUC__
-__attribute__ ((format (printf, 2, 3)))
+#ifdef __linux__
+void __attribute__((optimize("O0"))) purge(const uint64_t s)
+#elif defined(__clang__)
+void __attribute__((optnone)) purge(const uint64_t s)
 #endif
-static void nsyslog(int pri, const char *fmt, ...)
-{
-	va_list  args;
-	va_start(args, fmt);
-	if (ttyname(0) == NULL)
-		vsyslog(pri, fmt, args);
-	else
-	{
-		fprintf(stderr, "%s: ", __progname);
-		vfprintf(stderr, fmt, args);
-		fprintf(stderr, "\n");
-	}
-	va_end(args);
-}
-
-/*
- * Malloc space, barf if out of memory.
- */
-static void *xmalloc(int bytes)
-{
-	void *p;
-	if ((p = malloc(bytes)) == NULL)
-	{
-		if (sent_sigstop) kill(-1, SIGCONT);
-		nsyslog(LOG_ERR, "out of memory");
-		exit(1);
-	}
-	return p;
-}
-
-static int readarg(FILE *fp, char *buf, int sz)
-{
-	int c = 0, f = 0;
-	while (f < (sz-1) && (c = fgetc(fp)) != EOF && c)
-		buf[f++] = c;
-	buf[f] = 0;
-	return (c == EOF && f == 0) ? c : f;
-}
-
-/*
- * Read the proc filesystem.
- */
-static int readproc()
-{
-	DIR *dir;
-	FILE *fp;
-	PROC *p, *n;
-	struct dirent *d;
-	struct stat st;
-	char path[PATH_MAX];
-	char buf[PATH_MAX];
-	char *s, *q;
-	unsigned long startcode, endcode;
-	int pid, f;
-	/* Open the /proc directory. */
-	if ((dir = opendir("/proc")) == NULL)
-	{
-		nsyslog(LOG_ERR, "cannot opendir(/proc)");
-		return -1;
-	}
-	/* Free the already existing process list. */
-	n = plist;
-	for (p = plist; n; p = n)
-	{
-		n = p->next;
-		if (p->argv0) free(p->argv0);
-		if (p->argv1) free(p->argv1);
-		free(p);
-	}
-	plist = NULL;
-
-	/* Walk through the directory. */
-	while ((d = readdir(dir)) != NULL)
-	{
-		/* See if this is a process */
-		if ((pid = atoi(d->d_name)) == 0) continue;
-		/* Get a PROC struct . */
-		p = (PROC *)xmalloc(sizeof(PROC));
-		memset(p, 0, sizeof(PROC));
-		/* Open the status file. */
-		snprintf(path, sizeof(path), "/proc/%s/stat", d->d_name);
-		/* Read SID & statname from it. */
-		if ((fp = fopen(path, "r")) != NULL)
-		{
-			buf[0] = 0;
-			fgets(buf, sizeof(buf), fp);
-			/* See if name starts with '(' */
-			s = buf;
-			while (*s != ' ') s++;
-			s++;
-			if (*s == '(')
-			{
-				/* Read program name. */
-				q = strrchr(buf, ')');
-				if (q == NULL)
-				{
-					p->sid = 0;
-					nsyslog(LOG_ERR, "can't get program name from %s\n", path);
-					free(p);
-					continue;
-				}
-				s++;
-			}
-			else
-			{
-				q = s;
-				while (*q != ' ') q++;
-			}
-			*q++ = 0;
-			while (*q == ' ') q++;
-			p->statname = (char *)xmalloc(strlen(s)+1);
-			strcpy(p->statname, s);
-			/* Get session, startcode, endcode. */
-			startcode = endcode = 0;
-			if (sscanf(q, "%*c %*d %*d %d %*d %*d %*u %*u "
-					"%*u %*u %*u %*u %*u %*d %*d "
-					"%*d %*d %*d %*d %*u %*u %*d "
-					"%*u %lu %lu",
-					&p->sid, &startcode, &endcode) != 3)
-			{
-				p->sid = 0;
-				nsyslog(LOG_ERR, "can't read sid from %s\n", path);
-				free(p);
-				continue;
-			}
-			if (startcode == 0 && endcode == 0)
-				p->kernel = 1;
-			fclose(fp);
-		}
-		else
-		{
-			/* Process disappeared.. */
-			free(p);
-			continue;
-		}
-		snprintf(path, sizeof(path), "/proc/%s/cmdline", d->d_name);
-		if ((fp = fopen(path, "r")) != NULL)
-		{
-			/* Now read argv[0] */
-			f = readarg(fp, buf, sizeof(buf));
-			if (buf[0])
-			{
-				/* Store the name into malloced memory. */
-				p->argv0 = (char *)xmalloc(f + 1);
-				strcpy(p->argv0, buf);
-				/* Get a pointer to the basename. */
-				p->argv0base = strrchr(p->argv0, '/');
-				if (p->argv0base != NULL)
-					p->argv0base++;
-				else
-					p->argv0base = p->argv0;
-			}
-			/* And read argv[1] */
-			while ((f = readarg(fp, buf, sizeof(buf))) != EOF)
-				if (buf[0] != '-') break;
-			if (buf[0])
-			{
-				/* Store the name into malloced memory. */
-				p->argv1 = (char *)xmalloc(f + 1);
-				strcpy(p->argv1, buf);
-				/* Get a pointer to the basename. */
-				p->argv1base = strrchr(p->argv1, '/');
-				if (p->argv1base != NULL)
-					p->argv1base++;
-				else
-					p->argv1base = p->argv1;
-			}
-			fclose(fp);
-		}
-		else
-		{
-			/* Process disappeared.. */
-			free(p);
-			continue;
-		}
-		/* Try to stat the executable. */
-		snprintf(path, sizeof(path), "/proc/%s/exe", d->d_name);
-		if (stat(path, &st) == 0)
-		{
-			p->dev = st.st_dev;
-			p->ino = st.st_ino;
-		}
-		/* Link it into the list. */
-		p->next = plist;
-		plist = p;
-		p->pid = pid;
-	}
-	closedir(dir);
-	/* Done. */
-	return 0;
-}
-
-static PIDQ_HEAD *init_pid_q(PIDQ_HEAD *q)
-{
-	q->head = q->next = q->tail = NULL;
-	return q;
-}
-
-static int empty_q(PIDQ_HEAD *q)
-{
-	return (q->head == NULL);
-}
-
-static int add_pid_to_q(PIDQ_HEAD *q, PROC *p)
-{
-	PIDQ *tmp;
-	tmp = (PIDQ *)xmalloc(sizeof(PIDQ));
-	tmp->proc = p;
-	tmp->next = NULL;
-	if (empty_q(q))
-	{
-		q->head = tmp;
-		q->tail  = tmp;
-	}
-	else
-	{
-		q->tail->next = tmp;
-		q->tail = tmp;
-	}
-	return 0;
-}
-
-static PROC *get_next_from_pid_q(PIDQ_HEAD *q)
-{
-	PROC *p;
-	PIDQ *tmp = q->head;
-	if (!empty_q(q))
-	{
-		p = q->head->proc;
-		q->head = tmp->next;
-		free(tmp);
-		return p;
-	}
-	return NULL;
-}
-
-/* Try to get the process ID of a given process. */
-static PIDQ_HEAD *pidof(char *prog)
-{
-	PROC *p;
-	PIDQ_HEAD *q;
-	struct stat st;
-	char *s;
-	int dostat = 0;
-	int foundone = 0;
-	int ok = 0;
-	/* Try to stat the executable. */
-	if (prog[0] == '/' && stat(prog, &st) == 0) dostat++;
-	/* Get basename of program. */
-	if ((s = strrchr(prog, '/')) == NULL)
-		s = prog;
-	else
-		s++;
-	q = (PIDQ_HEAD *)xmalloc(sizeof(PIDQ_HEAD));
-	q = init_pid_q(q);
-	/* First try to find a match based on dev/ino pair. */
-	if (dostat)
-	{
-		for (p = plist; p; p = p->next)
-		{
-			if (p->dev == st.st_dev && p->ino == st.st_ino)
-			{
-				add_pid_to_q(q, p);
-				foundone++;
-			}
-		}
-	}
-	/* If we didn't find a match based on dev/ino, try the name. */
-	if (!foundone) for (p = plist; p; p = p->next)
-	{
-		ok = 0;
-		/* Compare name (both basename and full path) */
-		ok += (p->argv0 && strcmp(p->argv0, prog) == 0);
-		ok += (p->argv0 && strcmp(p->argv0base, s) == 0);
-		/* For scripts, compare argv[1] as well. */
-		if (scripts_too && p->argv1 &&
-		    !strncmp(p->statname, p->argv1base, STATNAMELEN))
-		{
-			ok += (strcmp(p->argv1, prog) == 0);
-			ok += (strcmp(p->argv1base, s) == 0);
-		}
-		/*
-		 *	if we have a space in argv0, process probably
-		 *	used setproctitle so try statname.
-		 */
-		if (strlen(s) <= STATNAMELEN &&
-		    (p->argv0 == NULL ||
-		     p->argv0[0] == 0 ||
-		     strchr(p->argv0, ' ')))
-			ok += (strcmp(p->statname, s) == 0);
-		if (ok) add_pid_to_q(q, p);
-	}
-	 return q;
-}
-
-/*
- * Pidof functionality.
- */
-int nproc(char *process)
-{
-	int np = 0;
-	PIDQ_HEAD *q;
-	PROC *p;
-	readproc();
-	if ((q = pidof(process)) != NULL)
-		while ((p = get_next_from_pid_q(q)))
-			++np;
-	closelog();
-	return np;
-}
-
-void purge_cache()
 {
 	uint64_t phys_mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
-	char purge_cmd[PATH_MAX], purge_exe[PATH_MAX];
-	char *home = realpath(dirname((char *)getauxval(AT_EXECFN)), 0);
-	snprintf(purge_exe, PATH_MAX, "%s/purge", home);
-	if (!access(purge_exe, X_OK))
+	if (phys_mem < s)
+		error("System memory is insufficient to be purged");
+	char *p = (char *)malloc(s * sizeof(char));
+	if (!p)
 	{
-		snprintf(purge_cmd, PATH_MAX, "%s %" PRIu64, purge_exe, phys_mem / GB(1) / 2);
-    	fprintf(stderr, "\033[31mPerform memory purging before exiting...\033[0m\n");
-		system(purge_cmd);
+		errno = ENOMEM;
+		error("Error allocating %" PRIu64 " memory\n", s);
 	}
-	free(home);
+	memset(p, 0, s * sizeof(char));
+	free(p);
+}
+
+int lock_file(int fd)
+{
+	struct flock lock;
+	lock.l_type = F_WRLCK;  // Write lock (exclusive)
+	lock.l_whence = SEEK_SET;
+	lock.l_start = 0;
+	lock.l_len = 0;  // Lock the whole file
+
+	if (fcntl(fd, F_SETLK, &lock) == -1)
+	{
+		if (errno == EACCES || errno == EAGAIN)
+			return 0;  // File is already locked
+		perror("fcntl");
+		return -1;
+	}
+	return 1;  // Lock acquired
 }
 
 void alarm_handler(int)
@@ -392,8 +103,12 @@ void alarm_handler(int)
 	// purge cache
 	uint64_t phys_mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
 	uint64_t avphys_mem = sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE);
-	if (!nproc((char *)"purge") && avphys_mem * 3 < phys_mem)
-		purge_cache();
+	int fd = open("/tmp/purge.lock", O_CREAT | O_RDWR, 0666);
+	if (fd == -1)
+		error("Error creating /tmp/purge.lock");
+	if (avphys_mem * 3 < phys_mem && lock_file(fd))
+		purge(phys_mem / 2);
+	close(fd);
 	system(commit_suicide);
 	exit(EXIT_FAILURE);
 }
