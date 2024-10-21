@@ -836,7 +836,7 @@ void mem_chain_seeds(FMI_search *fmi, const mem_opt_t *opt,
                 s.qbeg = p->m;
                 s.score= s.len = slen;
                 if (s.rbeg < 0 || s.len < 0) 
-                    fprintf(stderr, "rbeg: %"PRId64", slen: %d, cnt: %d, n: %d, m: %d, num_smem: %"PRId64"\n",
+                    fprintf(stderr, "rbeg: %"PRId64 ", slen: %d, cnt: %d, n: %d, m: %d, num_smem: %"PRId64 "\n",
                             s.rbeg, s.len, cnt-1, p->n, p->m, num_smem);
                 
                 rid = bns_intv2rid(bns, s.rbeg, s.rbeg + s.len);
@@ -971,7 +971,7 @@ int mem_kernel1_core(FMI_search *fmi,
         fprintf(stderr, "Error [bug]: num_smem: %ld is more than allocated space.\n", num_smem);
         exit(EXIT_FAILURE);
     }
-    printf_(VER, "6. Done! mem_collect_smem, num_smem: %"PRId64"\n", num_smem);
+    printf_(VER, "6. Done! mem_collect_smem, num_smem: %"PRId64 "\n", num_smem);
     tprof[MEM_COLLECT][tid] += __rdtsc() - tim; 
 
 
@@ -1291,7 +1291,7 @@ void mem_process_seqs(mem_opt_t *opt,
                                                          // distribution as pes0
         else {
             fprintf(stderr, "[0000] Inferring insert size distribution of PE reads from data, "
-                    "l_pac: %"PRId64", n: %d\n", w.fmi->idx->bns->l_pac, n);
+                    "l_pac: %"PRId64 ", n: %d\n", w.fmi->idx->bns->l_pac, n);
             mem_pestat(opt, w.fmi->idx->bns->l_pac, n, w.regs, pes); // otherwise, infer the insert size
                                                          // distribution from data
         }
