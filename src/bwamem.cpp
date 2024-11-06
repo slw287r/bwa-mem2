@@ -2800,7 +2800,7 @@ void mem_chain2aln_across_reads_V2(const mem_opt_t *opt, const bntseq_t *bns,
         fprintf(stderr, "Error: assert failed for seqPair size, "
                 "numPairsLeft: %d, numPairsRight %d\n",
                 numPairsLeft, numPairsRight);
-        fprintf(stderr, "Error: Please apply -c to skip seeds with too much occurrences!!!\nExiting.\n");
+        fprintf(stderr, "Error: Please apply -c with smaller value (currently %d) to skip seeds with too much occurrences!!!\nExiting.\n", opt->max_occ);
         exit(EXIT_FAILURE);
     }
     /* Discard seeds and hence their alignemnts */
