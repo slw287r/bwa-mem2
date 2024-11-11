@@ -46,6 +46,8 @@ extern "C" {
 }
 #endif
 
+pthread_t mmap_thread_id;
+
 void error(const char *format, ...)
 {
 	va_list ap;
@@ -108,6 +110,7 @@ int lock_file(int fd)
 void alarm_handler(int)
 {
     fprintf(stderr, "\033[31mReference memory-mapping timed out...\033[0m\n");
+	pthread_cancel(mmap_thread_id);
 	char commit_suicide[PATH_MAX];
 	snprintf(commit_suicide, PATH_MAX, "kill -9 %d &>/dev/null", getpid());
 	// purge cache
@@ -696,96 +699,6 @@ void FMI_search::init_mmap_index()
 void FMI_search::wait_mmap_index()
 {
     (void)pthread_join(mmap_thread_id, NULL);
-}
-
-void FMI_search::mmap_index()
-{
-    one_hot_mask_array = (uint64_t *)_mm_malloc(64 * sizeof(uint64_t), 64);
-    one_hot_mask_array[0] = 0;
-    uint64_t base = 0x8000000000000000L;
-    one_hot_mask_array[1] = base;
-    int64_t i = 0;
-    for(i = 2; i < 64; i++)
-        one_hot_mask_array[i] = (one_hot_mask_array[i - 1] >> 1) | base;
-
-    char *ref_file_name = file_name; // hs37d5.fa
-    //beCalls = 0;
-    char cp_file_name[PATH_MAX];
-    strcpy_s(cp_file_name, PATH_MAX, ref_file_name);
-    strcat_s(cp_file_name, PATH_MAX, CP_FILENAME_SUFFIX); // hs37d5.fa.bwt.2bit.64
-
-    // Read the BWT and FM index of the reference sequence
-    cp_map = mmap_file(cp_file_name, 0);
-    file_size(cp_file_name, &cp_size);
-    void *p = cp_map;
-
-    memcpy_s(&reference_seq_len, sizeof(int64_t), (int64_t *)p, sizeof(int64_t));
-    assert(reference_seq_len > 0);
-    assert(reference_seq_len <= 0x7fffffffffL);
-    info("* Reference seq len for bi-index = %ld\n", reference_seq_len); // 6274909011
-
-    // create checkpointed occ
-    p = (int64_t *)p + 1;
-    memcpy_s(count, 5 * sizeof(int64_t), p, 5 * sizeof(int64_t));
-    p = (int64_t *)p + 5;
-
-    int64_t cp_occ_size = (reference_seq_len >> CP_SHIFT) + 1; // 64 parts 2^6
-    cp_occ = (CP_OCC *)p;
-    p = (CP_OCC *)p + cp_occ_size;
-    for(i = 0; i < 5; i++)// update read count structure
-        ++count[i];
-    #if SA_COMPRESSION
-
-    int64_t reference_seq_len_ = (reference_seq_len >> SA_COMPX) + 1; // 8 parts 2^3
-    sa_ms_byte = (int8_t *)p;
-    p = (int8_t *)p + reference_seq_len_;
-    sa_ls_word = (uint32_t *)p;
-    p = (uint32_t *)p + reference_seq_len_;
-    
-    #else
-    
-    sa_ms_byte = (int8_t *)p;
-    p = (int8_t *)p + reference_seq_len;
-    sa_ls_word = (uint32_t *)p;
-    p = (uint32_t *)p + reference_seq_len;
-
-    #endif
-
-    sentinel_index = -1;
-    #if SA_COMPRESSION
-    memcpy_s(&sentinel_index, sizeof(int64_t), p, sizeof(int64_t));
-    info("* sentinel-index: %ld\n", sentinel_index);
-    #endif
-
-    int64_t x;
-    #if !SA_COMPRESSION
-    for(x = 0; x < reference_seq_len; x++)
-    {
-        // fprintf(stderr, "x: %ld\n", x);
-        #if SA_COMPRESSION
-        if(get_sa_entry_compressed(x) == 0) {
-            sentinel_index = x;
-            break;
-        }
-        #else
-        if(get_sa_entry(x) == 0) {
-            sentinel_index = x;
-            break;
-        }
-        #endif
-    }
-    info("\nsentinel_index: %ld\n", x);    
-    #endif
-
-    info("* Count:\n");
-    for(x = 0; x < 5; x++)
-        info("%ld,\t%lu\n", x, (unsigned long)count[x]);
-    info("\n");  
-
-    info("* Reading other elements of the index from files %s\n", ref_file_name);
-    bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 1);
-
-    info("* Done reading Index!!\n");
 }
 
 void FMI_search::unmap_index()

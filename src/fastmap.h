@@ -53,6 +53,7 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #include "kseq.h"
 #include "profiling.h"
 
+extern pthread_t mmap_thread_id;
 KSEQ_DECLARE(gzFile)
 
 typedef struct {

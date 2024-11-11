@@ -903,10 +903,11 @@ int main_mem(int argc, char *argv[])
             opt->use_mmap = 0;
         }
     }
-	*/
+    */
     aux.fmi = new FMI_search(argv[optind], opt->use_mmap, bwa_verbose);
     if (opt->use_mmap)
     {
+        /*
         if (opt->mmap_timeout == INT_MAX)
             aux.fmi->mmap_index();
         else
@@ -916,6 +917,14 @@ int main_mem(int argc, char *argv[])
             alarm(std::max(1, (int)(opt->mmap_timeout * 60)));
             aux.fmi->wait_mmap_index();
         }
+        */
+        aux.fmi->init_mmap_index();
+        if (opt->mmap_timeout != INT_MAX)
+        {
+            signal(SIGALRM, alarm_handler);
+            alarm(std::max(1, (int)(opt->mmap_timeout * 60)));
+        }
+        aux.fmi->wait_mmap_index();
     }
     else
         aux.fmi->load_index();

@@ -40,7 +40,6 @@ Authors: Sanchit Misra <sanchit.misra@intel.com>; Vasimuddin Md <vasimuddin.md@i
 
 // for function time out
 #include <unistd.h>
-#include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <libgen.h>
@@ -48,6 +47,7 @@ Authors: Sanchit Misra <sanchit.misra@intel.com>; Vasimuddin Md <vasimuddin.md@i
 #include <errno.h>
 #include <ftw.h>
 #include <fts.h>
+#include <pthread.h>
 
 #include "read_index_ele.h"
 #include "bwa.h"
@@ -105,8 +105,8 @@ typedef struct
 
 void error(const char *format, ...);
 int lock_file(int fd);
-void alarm_handler(int);
 void purge(const uint64_t s);
+void alarm_handler(int);
 void *mmap_index_alarm(void *arg);
 
 class FMI_search: public indexEle
@@ -196,7 +196,7 @@ class FMI_search: public indexEle
     int64_t reference_seq_len;
     int64_t sentinel_index;
     void init_mmap_index(void);
-	void wait_mmap_index(void);
+    void wait_mmap_index(void);
 private:
     int verbose;
     void info(const char *format, ...);
@@ -222,7 +222,6 @@ private:
     int use_mmap;
     void *cp_map;
     int64_t cp_size;
-    pthread_t mmap_thread_id;
     friend void *mmap_index_alarm(void *arg);
 };
 
