@@ -132,7 +132,7 @@ extern "C" {
     void ks_introsort_64 (size_t n, uint64_t *a);
     void ks_introsort_128(size_t n, pair64_t *a);
     void file_size(const char *fn, int64_t *size);
-	const char *get_username();
+    const char *get_username();
     int64_t get_memory();
     int64_t max_locked_mem();
     void *mmap_file(const char *fn, int64_t size);
