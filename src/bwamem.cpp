@@ -1347,9 +1347,9 @@ int mem_mark_primary_se(const mem_opt_t *opt, int n, mem_alnreg_t *a, int64_t id
     {
         a[i].sub = a[i].alt_sc = 0, a[i].secondary = a[i].secondary_all = -1, a[i].hash = hash_64(id+i);
         if (!a[i].is_alt) ++n_pri;
-		a[i].gscore = a[i].score + a[i].truesc;
+        a[i].gscore = a[i].score + a[i].truesc;
     }
-	// calc gscore
+    // calc gscore
     ks_introsort(mem_ars_hash, n, a);
     mem_mark_primary_se_core(opt, n, a, &z);
     for (i = 0; i < n; ++i)

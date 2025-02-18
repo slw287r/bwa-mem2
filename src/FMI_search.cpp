@@ -46,18 +46,19 @@ extern "C" {
 }
 #endif
 
-pthread_t mmap_thread_id;
+pthread_t mmap_thread_id = 0;
+bool mmap_index_done = false;
 
 void error(const char *format, ...)
 {
-	va_list ap;
-	va_start(ap, format);
-	fputs("\e[31m\xE2\x9C\x97\e[0m ", stderr);
-	vfprintf(stderr, format, ap);
-	fprintf(stderr, "%s\n", strerror(errno));
-	va_end(ap);
-	fflush(stderr);
-	exit(EXIT_FAILURE);
+    va_list ap;
+    va_start(ap, format);
+    fputs("\e[31m\xE2\x9C\x97\e[0m ", stderr);
+    vfprintf(stderr, format, ap);
+    fprintf(stderr, "%s\n", strerror(errno));
+    va_end(ap);
+    fflush(stderr);
+    exit(EXIT_FAILURE);
 }
 
 #ifdef __linux__
@@ -66,69 +67,72 @@ void __attribute__((optimize("O0"))) purge(const uint64_t s)
 void __attribute__((optnone)) purge(const uint64_t s)
 #endif
 {
-	uint64_t phys_mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
-	if (phys_mem < s)
-		error("System memory is insufficient to be purged");
-	char *p = (char *)malloc(s * sizeof(char));
-	if (!p)
-	{
-		errno = ENOMEM;
-		error("Error allocating %" PRIu64 " memory\n", s);
-	}
-	memset(p, 0, s * sizeof(char));
-	free(p);
+    uint64_t phys_mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
+    if (phys_mem < s)
+        error("System memory is insufficient to be purged");
+    char *p = (char *)malloc(s * sizeof(char));
+    if (!p)
+    {
+        errno = ENOMEM;
+        error("Error allocating %" PRIu64 " memory\n", s);
+    }
+    memset(p, 0, s * sizeof(char));
+    free(p);
 }
 
 int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
-	return remove(fpath);
+    return remove(fpath);
 }
 
 int clean(const char *path)
 {
-	return nftw(path, unlink_cb, FOPEN_MAX, FTW_DEPTH | FTW_PHYS);
+    return nftw(path, unlink_cb, FOPEN_MAX, FTW_DEPTH | FTW_PHYS);
 }
 
 int lock_file(int fd)
 {
-	struct flock lock;
-	lock.l_type = F_WRLCK;  // Write lock (exclusive)
-	lock.l_whence = SEEK_SET;
-	lock.l_start = 0;
-	lock.l_len = 0;  // Lock the whole file
+    struct flock lock;
+    lock.l_type = F_WRLCK;  // Write lock (exclusive)
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;  // Lock the whole file
 
-	if (fcntl(fd, F_SETLK, &lock) == -1)
-	{
-		if (errno == EACCES || errno == EAGAIN)
-			return 0;  // File is already locked
-		perror("fcntl");
-		return -1;
-	}
-	return 1;  // Lock acquired
+    if (fcntl(fd, F_SETLK, &lock) == -1)
+    {
+        if (errno == EACCES || errno == EAGAIN)
+            return 0;  // File is already locked
+        perror("fcntl");
+        return -1;
+    }
+    return 1;  // Lock acquired
 }
 
 void alarm_handler(int)
 {
-    fprintf(stderr, "\033[31mReference memory-mapping timed out...\033[0m\n");
-	pthread_cancel(mmap_thread_id);
-	char commit_suicide[PATH_MAX];
-	snprintf(commit_suicide, PATH_MAX, "kill -9 %d &>/dev/null", getpid());
-	// purge cache
+    if (!mmap_index_done)
+    {
+        fprintf(stderr, "\033[31mReference memory-mapping timed out...\033[0m\n");
+        pthread_cancel(mmap_thread_id);
+        char commit_suicide[PATH_MAX];
+        snprintf(commit_suicide, PATH_MAX, "kill -9 %d &>/dev/null", getpid());
+        // purge cache
 #ifdef __linux__
-	uint64_t phys_mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
-	uint64_t avphys_mem = sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE);
-	int fd = open("/tmp/purge.lock", O_CREAT | O_RDWR, 0666);
-	if (fd == -1)
-		error("Error creating /tmp/purge.lock");
-	if (avphys_mem * 3 < phys_mem && lock_file(fd))
-	{
-		purge(phys_mem / 2);
-		clean("/tmp/purge.lock");
-	}
-	close(fd);
+        uint64_t phys_mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
+        uint64_t avphys_mem = sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE);
+        int fd = open("/tmp/purge.lock", O_CREAT | O_RDWR, 0666);
+        if (fd == -1)
+            error("Error creating /tmp/purge.lock");
+        if (avphys_mem * 3 < phys_mem && lock_file(fd))
+        {
+            purge(phys_mem / 2);
+            clean("/tmp/purge.lock");
+        }
+        close(fd);
 #endif
-	system(commit_suicide);
-	exit(EXIT_FAILURE);
+        system(commit_suicide);
+        exit(EXIT_FAILURE);
+    }
 }
 
 void FMI_search::info(const char *format, ...)
@@ -595,7 +599,7 @@ void FMI_search::load_index()
     info("* Done reading Index!!\n");
 }
 
-void *mmap_index_alarm(void *arg)
+void *mmap_index(void *arg)
 {
     FMI_search *th = (FMI_search *)arg;
     th->one_hot_mask_array = (uint64_t *)_mm_malloc(64 * sizeof(uint64_t), 64);
@@ -606,11 +610,11 @@ void *mmap_index_alarm(void *arg)
     for(i = 2; i < 64; i++)
         th->one_hot_mask_array[i] = (th->one_hot_mask_array[i - 1] >> 1) | base;
 
-    char *ref_file_name = th->file_name; // hs37d5.fa
+    char *ref_file_name = th->file_name;
     //beCalls = 0;
     char cp_file_name[PATH_MAX];
     strcpy_s(cp_file_name, PATH_MAX, ref_file_name);
-    strcat_s(cp_file_name, PATH_MAX, CP_FILENAME_SUFFIX); // hs37d5.fa.bwt.2bit.64
+    strcat_s(cp_file_name, PATH_MAX, CP_FILENAME_SUFFIX); // .bwt.2bit.64
 
     // Read the BWT and FM index of the reference sequence
     th->cp_map = mmap_file(cp_file_name, 0);
@@ -684,16 +688,17 @@ void *mmap_index_alarm(void *arg)
     th->bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 1);
 
     th->info("* Done reading Index!!\n");
+    mmap_index_done = true;
     return NULL;
 }
 
 void FMI_search::init_mmap_index()
 {
-    if (pthread_create(&mmap_thread_id, NULL, &mmap_index_alarm, this))
-	{
-		error("Error creating mmap thread\n");
-		exit(EXIT_FAILURE);
-	}
+    if (pthread_create(&mmap_thread_id, NULL, &mmap_index, this))
+    {
+        error("Error creating mmap thread\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void FMI_search::wait_mmap_index()

@@ -183,7 +183,7 @@ void memoryAlloc(ktp_aux_t *aux, worker_t &w, int32_t nreads, int32_t nthreads)
         nthreads * BATCH_MUL * BATCH_SIZE * readLen *sizeof(int32_t) +
         nthreads * (BATCH_SIZE + 32) * sizeof(int32_t);
     if (bwa_verbose >= 3)
-	{
+    {
         fprintf(stderr, "3. Memory pre-allocation for BWT: %0.4lf MB\n", allocMem/1e6);
         fprintf(stderr, "----------------------------------------------------\n");
     }
@@ -889,7 +889,6 @@ int main_mem(int argc, char *argv[])
     int64_t bwt_size;
     file_size(bwt, &bwt_size);
     free(bwt);
-	/*
     if (bwt_size > max_locked_mem())
     {
         if (opt->use_mmap)
@@ -902,21 +901,9 @@ int main_mem(int argc, char *argv[])
             opt->use_mmap = 0;
         }
     }
-    */
     aux.fmi = new FMI_search(argv[optind], opt->use_mmap, bwa_verbose);
     if (opt->use_mmap)
     {
-        /*
-        if (opt->mmap_timeout == INT_MAX)
-            aux.fmi->mmap_index();
-        else
-        {
-            aux.fmi->init_mmap_index();
-            signal(SIGALRM, alarm_handler);
-            alarm(std::max(1, (int)(opt->mmap_timeout * 60)));
-            aux.fmi->wait_mmap_index();
-        }
-        */
         aux.fmi->init_mmap_index();
         if (opt->mmap_timeout != INT_MAX)
         {

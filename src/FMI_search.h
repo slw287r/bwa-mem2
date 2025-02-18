@@ -98,7 +98,7 @@ typedef struct smem_struct
 
 typedef struct
 {
-	char file_name[PATH_MAX];
+    char file_name[PATH_MAX];
     int64_t reference_seq_len;
     int64_t count[5];
 } ref_t;
@@ -107,7 +107,6 @@ void error(const char *format, ...);
 int lock_file(int fd);
 void purge(const uint64_t s);
 void alarm_handler(int);
-void *mmap_index_alarm(void *arg);
 
 class FMI_search: public indexEle
 {
@@ -118,7 +117,6 @@ class FMI_search: public indexEle
 
     int build_index();
     void load_index();
-    void mmap_index();
     void unmap_index();
 
     void getSMEMs(uint8_t *enc_qdb,
@@ -222,7 +220,7 @@ private:
     int use_mmap;
     void *cp_map;
     int64_t cp_size;
-    friend void *mmap_index_alarm(void *arg);
+    friend void *mmap_index(void *arg);
 };
 
 #endif
