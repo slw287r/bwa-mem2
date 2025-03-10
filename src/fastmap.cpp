@@ -889,18 +889,6 @@ int main_mem(int argc, char *argv[])
     int64_t bwt_size;
     file_size(bwt, &bwt_size);
     free(bwt);
-    if (bwt_size > max_locked_mem())
-    {
-        if (opt->use_mmap)
-        {
-            fprintf(stderr, "* mmap (-z) is disabled by sysconf..\n");
-            fprintf(stderr, "* To enable it for the current user, add the following two lines to\n");
-            fprintf(stderr, "  /etc/security/limits.conf\n");
-            fprintf(stderr, "  %s  hard  memlock  -1\n", get_username());
-            fprintf(stderr, "  %s  soft  memlock  -1\n", get_username());
-            opt->use_mmap = 0;
-        }
-    }
     aux.fmi = new FMI_search(argv[optind], opt->use_mmap, bwa_verbose);
     if (opt->use_mmap)
     {
@@ -919,7 +907,8 @@ int main_mem(int argc, char *argv[])
     // reading ref string from the file
     tim = __rdtsc();
     if (bwa_verbose >= 3)
-        fprintf(stderr, "* Reading reference genome..\n");
+        fprintf(stderr, opt->use_mmap ? "* Reading reference genome (mmap)..\n" :
+                "* Reading reference genome..\n");
 
     char binary_seq_file[PATH_MAX];
     strcpy_s(binary_seq_file, PATH_MAX, argv[optind]);
