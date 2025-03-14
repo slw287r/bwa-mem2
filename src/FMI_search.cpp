@@ -120,14 +120,12 @@ void alarm_handler(int)
 #ifdef __linux__
         uint64_t phys_mem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
         uint64_t avphys_mem = sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE);
-        int fd = open("/tmp/purge.lock", O_CREAT | O_RDWR, 0666);
+        int fd = open(PURGE_LOCK, O_CREAT | O_RDWR, 0666);
         if (fd == -1)
-            error("Error creating /tmp/purge.lock");
+            error("Error creating %s\n", PURGE_LOCK);
         if (avphys_mem * 3 < phys_mem && lock_file(fd))
-        {
             purge(phys_mem / 2);
-            clean("/tmp/purge.lock");
-        }
+        clean(PURGE_LOCK);
         close(fd);
 #endif
         system(commit_suicide);
