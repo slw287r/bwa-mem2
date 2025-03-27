@@ -44,7 +44,7 @@ MEM_FLAGS=	-DSAIS=1
 CPPFLAGS+=	-DENABLE_PREFETCH -DV17=1 -DMATE_SORT=0 $(MEM_FLAGS) 
 INCLUDES=   -Isrc -Iext/safestringlib/include
 LIBS=		-lpthread -lm -lisal -L. -lbwa -Lext/safestringlib -lsafestring $(STATIC_GCC)
-OBJS=		src/fastmap.o src/bwtindex.o src/utils.o src/memcpy_bwamem.o src/kthread.o \
+OBJS=		src/fastmap.o src/bwtindex.o src/utils.o src/vmtch.o src/memcpy_bwamem.o src/kthread.o \
 			src/kstring.o src/ksw.o src/bntseq.o src/bwamem.o src/profiling.o src/bandedSWA.o \
 			src/FMI_search.o src/read_index_ele.o src/bwamem_pair.o src/kswv.o src/bwa.o \
 			src/bwamem_extra.o src/kopen.o
@@ -169,5 +169,6 @@ src/main.o: src/profiling.h
 src/profiling.o: src/macro.h
 src/read_index_ele.o: src/read_index_ele.h src/utils.h src/bntseq.h
 src/read_index_ele.o: src/macro.h
-src/utils.o: src/utils.h src/ksort.h src/kseq.h
+src/utils.o: src/utils.h src/ksort.h src/kseq.h src/vmtch.h
+src/vmtch.o: src/vmtch.h
 src/memcpy_bwamem.o: src/memcpy_bwamem.h
