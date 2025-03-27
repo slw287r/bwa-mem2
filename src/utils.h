@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "izlib.h"
+#include "vmtch.h"
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
@@ -135,7 +136,7 @@ extern "C" {
     const char *get_username();
     int64_t get_memory();
     int64_t max_locked_mem();
-    void *mmap_file(const char *fn, int64_t size);
+    void *mmap_file(char *fn, int64_t size);
     void unmap_file(void *map, size_t map_size);
 #ifdef __cplusplus
 }

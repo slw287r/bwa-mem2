@@ -634,31 +634,27 @@ void *mmap_index(void *arg)
     p = (CP_OCC *)p + cp_occ_size;
     for(i = 0; i < 5; i++)// update read count structure
         ++th->count[i];
-    #if SA_COMPRESSION
-
+#if SA_COMPRESSION
     int64_t reference_seq_len_ = (th->reference_seq_len >> SA_COMPX) + 1; // 8 parts 2^3
     th->sa_ms_byte = (int8_t *)p;
     p = (int8_t *)p + reference_seq_len_;
     th->sa_ls_word = (uint32_t *)p;
     p = (uint32_t *)p + reference_seq_len_;
-
-    #else
-
+#else
     th->sa_ms_byte = (int8_t *)p;
     p = (int8_t *)p + th->reference_seq_len;
     th->sa_ls_word = (uint32_t *)p;
     p = (uint32_t *)p + th->reference_seq_len;
-
-    #endif
+#endif
 
     th->sentinel_index = -1;
-    #if SA_COMPRESSION
+#if SA_COMPRESSION
     memcpy_s(&th->sentinel_index, sizeof(int64_t), p, sizeof(int64_t));
     th->info("* sentinel-index: %ld\n", th->sentinel_index);
-    #endif
+#endif
 
     int64_t x;
-    #if !SA_COMPRESSION
+#if !SA_COMPRESSION
     for(x = 0; x < th->reference_seq_len; x++)
     {
         // fprintf(stderr, "x: %ld\n", x);
@@ -675,7 +671,7 @@ void *mmap_index(void *arg)
         #endif
     }
     th->info("\nsentinel_index: %ld\n", x);
-    #endif
+#endif
 
     th->info("* Count:\n");
     for(x = 0; x < 5; x++)

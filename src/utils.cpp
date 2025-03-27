@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "izlib.h"
+#include "vmtch.h"
 #include <errno.h>
 #ifdef FSYNC_ON_FLUSH
 #include <sys/types.h>
@@ -330,7 +331,7 @@ int64_t max_locked_mem()
     return mlm;
 }
 
-void *mmap_file(const char *fn, int64_t size)
+void *mmap_file(char *fn, int64_t size)
 {
     int fd = open(fn, O_RDONLY);
     xassert(fd > -1, "Error opening file");
@@ -340,11 +341,12 @@ void *mmap_file(const char *fn, int64_t size)
     xassert(s > -1, "Error stating file");
 
     off_t st_size = buf.st_size;
-    if (size > 0) {
+    if (size > 0)
+    {
         xassert(st_size >= size, "Bad file size");
         st_size = size;
     }
-
+    vmtouch(fn);
     // mmap flags:
     // MAP_PRIVATE: copy-on-write mapping. Writes not propagated to file.
     // MAP_POPULATE: prefault page tables for mapping.  Use read-ahead. Only supported for MAP_PRIVATE
@@ -358,15 +360,17 @@ void *mmap_file(const char *fn, int64_t size)
     //              will take forever as parts of the reference are evicted and/or reloaded from disk.
     int map_flags = MAP_FLAGS;
     //fprintf(stderr, "* mmapping file %s (%0.1fMB)\n", fn, ((double)st_size) / (1024*1024));
-    void* m = mmap(0, st_size, PROT_READ, map_flags, fd, 0);
-    if (m == MAP_FAILED) {
+    void *m = mmap(0, st_size, PROT_READ, map_flags, fd, 0);
+    if (m == MAP_FAILED)
+    {
         perror(__func__);
         err_fatal("Failed to map %s file to memory", fn);
     }
     //fprintf(stderr, "* File %s locked in memory\n", fn);
     close(fd);
     // MADV_WILLNEED:  Expect access in the near future
-    madvise(m, st_size, MADV_WILLNEED);
+    //madvise(m, st_size, MADV_WILLNEED);
+    madvise(m, st_size, MADV_SEQUENTIAL);
     return m;
 }
 
