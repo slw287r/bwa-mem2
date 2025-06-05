@@ -227,7 +227,7 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
             for (int i = 0; i < ret->n_seqs; ++i) size += ret->seqs[i].l_seq;
 
             if (bwa_verbose >= 3)
-                fprintf(stderr, "\t[M::%s] read %d sequences (%ld bp)...\n",
+                fprintf(stderr, "       [M::%s] read %d sequences (%ld bp)...\n",
                         __func__, ret->n_seqs, (long)size);
         }
 

@@ -682,7 +682,7 @@ void *mmap_index(void *arg)
     for(x = 0; x < 5; x++)
         th->info("%ld,\t%lu\n", x, (unsigned long)th->count[x]);
     fputc('\n', stderr);
-    th->info("[[%s] Reading other elements of the index from files %s\n",
+    th->info("[%s] Reading other elements of the index from files %s\n",
             time_stamp().c_str(), ref_file_name);
     th->bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 1);
 

@@ -1300,7 +1300,7 @@ void mem_process_seqs(mem_opt_t *opt,
     kt_for(worker_sam, &w,  n_);   // SAM   
     tprof[WORKER20][0] += __rdtsc() - tim;
 
-    fprintf(stderr, "\t[INFO][ M::%s] Processed %d reads in %.3f "
+    fprintf(stderr, "       [M::%s] Processed %d reads in %.3f "
             "CPU sec, %.3f real sec\n",
             __func__, n, cputime() - ctime, realtime() - rtime);
 
