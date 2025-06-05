@@ -138,7 +138,10 @@ void FMI_search::info(const char *format, ...)
     va_list ap;
     va_start(ap, format);
     if (verbose >= 3)
+    {
+        fputs("[INFO] ",  stderr);
         vfprintf(stderr, format, ap);
+    }
     va_end(ap);
 }
 
@@ -155,7 +158,7 @@ void FMI_search::error(const char *format, ...)
 FMI_search::FMI_search(const char *fname, int _use_mmap, int _verbose)
 {
     verbose = _verbose;
-    info("* Entering FMI_search\n");
+    info("Entering FMI_search\n");
     //strcpy(file_name, fname);
     strcpy_s(file_name, PATH_MAX, fname);
     reference_seq_len = 0;
@@ -311,7 +314,7 @@ int FMI_search::build_fm_index(
                 case 3: bwt[i] = 3;
                     break;
                 default:
-                    fprintf(stderr, "ERROR! i = %" PRId64 ", c = %c\n", i, c);
+                    fprintf(stderr, "[ERROR] i = %" PRId64 ", c = %c\n", i, c);
                     exit(EXIT_FAILURE);
             }
         }
@@ -521,15 +524,15 @@ void FMI_search::load_index()
     FILE *cpstream = NULL;
     cpstream = fopen(cp_file_name,"rb");
     if (cpstream == NULL)
-        error("ERROR! Unable to open the file: %s\n", cp_file_name);
+        error("[ERROR] Unable to open the file: %s\n", cp_file_name);
     else
-        info("* Index file found. Loading index from %s\n", cp_file_name);
+        info("Index file found. Loading index from %s\n", cp_file_name);
 
     err_fread_noeof(&reference_seq_len, sizeof(int64_t), 1, cpstream);
     assert(reference_seq_len > 0);
     assert(reference_seq_len <= 0x7fffffffffL);
 
-    info("* Reference seq len for bi-index = %ld\n", reference_seq_len); // 6274909011
+    info("Reference seq len for bi-index = %ld\n", reference_seq_len); // 6274909011
 
     // create checkpointed occ
     int64_t cp_occ_size = (reference_seq_len >> CP_SHIFT) + 1; // 64 parts 2^6
@@ -537,8 +540,8 @@ void FMI_search::load_index()
 
     err_fread_noeof(&count[0], sizeof(int64_t), 5, cpstream);
     if ((cp_occ = (CP_OCC *)_mm_malloc(cp_occ_size * sizeof(CP_OCC), 64)) == NULL)
-        error("ERROR! unable to allocated cp_occ memory\n");
-    info("* size of cp_occ: %lld\n", cp_occ_size * sizeof(CP_OCC)); // 6274909056
+        error("[ERROR] unable to allocated cp_occ memory\n");
+    info("size of cp_occ: %lld\n", cp_occ_size * sizeof(CP_OCC)); // 6274909056
     err_fread_noeof(cp_occ, sizeof(CP_OCC), cp_occ_size, cpstream);
     for(i = 0; i < 5; i++)// update read count structure
         count[i] = count[i] + 1;
@@ -562,7 +565,7 @@ void FMI_search::load_index()
     sentinel_index = -1;
     #if SA_COMPRESSION
     err_fread_noeof(&sentinel_index, sizeof(int64_t), 1, cpstream);
-    info("* sentinel-index: %ld\n", sentinel_index);
+    info("sentinel-index: %ld\n", sentinel_index);
     #endif
     fclose(cpstream);
 
@@ -583,18 +586,19 @@ void FMI_search::load_index()
         }
         #endif
     }
-    info("\nsentinel_index: %ld\n", x);    
+    fputc('\n', stderr)
+    info("sentinel_index: %ld\n", x);    
     #endif
 
-    info("* Count:\n");
+    info("[Count:\n");
     for(x = 0; x < 5; x++)
         info("%ld,\t%lu\n", x, (unsigned long)count[x]);
-    info("\n");  
+    fputc('\n', stderr)
 
-    info("[INFO] [%s] Reading other elements of the index from files %s\n", time_stamp(), ref_file_name);
+    info("[%s] Reading other elements of the index from files %s\n", time_stamp().c_str(), ref_file_name);
     bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 0);
 
-    info("[INFO] [%s] Done reading Index!!\n", time_stamp());
+    info("[%s] Done reading Index!!\n", time_stamp().c_str());
 }
 
 void *mmap_index(void *arg)
@@ -622,7 +626,7 @@ void *mmap_index(void *arg)
     memcpy_s(&th->reference_seq_len, sizeof(int64_t), (int64_t *)p, sizeof(int64_t));
     assert(th->reference_seq_len > 0);
     assert(th->reference_seq_len <= 0x7fffffffffL);
-    th->info("* Reference seq len for bi-index = %ld\n", th->reference_seq_len); // 6274909011
+    th->info("Reference seq len for bi-index = %ld\n", th->reference_seq_len); // 6274909011
 
     // create checkpointed occ
     p = (int64_t *)p + 1;
@@ -650,7 +654,7 @@ void *mmap_index(void *arg)
     th->sentinel_index = -1;
 #if SA_COMPRESSION
     memcpy_s(&th->sentinel_index, sizeof(int64_t), p, sizeof(int64_t));
-    th->info("* sentinel-index: %ld\n", th->sentinel_index);
+    th->info("sentinel-index: %ld\n", th->sentinel_index);
 #endif
 
     int64_t x;
@@ -670,18 +674,19 @@ void *mmap_index(void *arg)
         }
         #endif
     }
-    th->info("\nsentinel_index: %ld\n", x);
+    fputc('\n', stderr);
+    th->info("sentinel_index: %ld\n", x);
 #endif
 
-    th->info("* Count:\n");
+    th->info("Count:\n");
     for(x = 0; x < 5; x++)
         th->info("%ld,\t%lu\n", x, (unsigned long)th->count[x]);
-    th->info("\n");
-
-    th->info("* Reading other elements of the index from files %s\n", ref_file_name);
+    fputc('\n', stderr);
+    th->info("[[%s] Reading other elements of the index from files %s\n",
+            time_stamp().c_str(), ref_file_name);
     th->bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 1);
 
-    th->info("* Done reading Index!!\n");
+    th->info("[%s] Done reading Index!!\n", time_stamp().c_str());
     mmap_index_done = true;
     return NULL;
 }

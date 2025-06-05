@@ -227,7 +227,7 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
             for (int i = 0; i < ret->n_seqs; ++i) size += ret->seqs[i].l_seq;
 
             if (bwa_verbose >= 3)
-                fprintf(stderr, "\t[INFO][ M::%s] read %d sequences (%ld bp)...\n",
+                fprintf(stderr, "\t[M::%s] read %d sequences (%ld bp)...\n",
                         __func__, ret->n_seqs, (long)size);
         }
 
@@ -521,7 +521,7 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
     /***** pipeline ends ******/
 
     if (bwa_verbose >= 3)
-        fprintf(stderr, "[INFO] [%s] Computation ends..\n", time_stamp());
+        fprintf(stderr, "[INFO] [%s] Computation ends..\n", time_stamp().c_str());
 
     /* Dealloc memory allcoated in the header section */
     free(w.chain_ar);
@@ -909,9 +909,9 @@ int main_mem(int argc, char *argv[])
     if (bwa_verbose >= 3)
 	{
         if (opt->use_mmap)
-            fprintf(stderr, "[INFO] [%s] Reading reference genome (mmap)..\n", time_stamp());
+            fprintf(stderr, "[INFO] [%s] Reading reference genome (mmap)..\n", time_stamp().c_str());
         else
-            fprintf(stderr, "[INFO] [%s] Reading reference genome..\n", time_stamp());
+            fprintf(stderr, "[INFO] [%s] Reading reference genome..\n", time_stamp().c_str());
 	}
 
     char binary_seq_file[PATH_MAX];
@@ -960,7 +960,7 @@ int main_mem(int argc, char *argv[])
     if (bwa_verbose >= 3)
     {
         fprintf(stderr, "[INFO] Reference genome size: %" PRId64 " bp\n", rlen);
-        fprintf(stderr, "[INFO] [%s] Done reading reference genome!!\n\n", time_stamp());
+        fprintf(stderr, "[INFO] [%s] Done reading reference genome!!\n\n", time_stamp().c_str());
     }
 
     if (ignore_alt)
