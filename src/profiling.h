@@ -30,6 +30,13 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 #ifndef _PROFILE_HPP
 #define _PROFILE_HPP
 
+#include <iostream>
+#include <chrono>
+#include <iomanip> // For std::put_time
+#include <sstream> // For std::stringstream
+#include <string> // For std::string
+
 int display_stats(int );
 extern uint64_t proc_freq, tprof[LIM_R][LIM_C];
+std::string time_stamp();
 #endif

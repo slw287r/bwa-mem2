@@ -238,3 +238,12 @@ int display_stats(int nthreads)
     return 1;
 }
 
+std::string time_stamp()
+{
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+    std::tm now_tm = *std::localtime(&now_c);
+    std::stringstream ss;
+    ss << std::put_time(&now_tm, "%Y-%m-%d %H:%M:%S");
+    return ss.str();
+}

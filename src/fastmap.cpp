@@ -209,7 +209,7 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
         tprof[READ_IO][0] += __rdtsc() - tim;
 
         if (bwa_verbose >= 3)
-            fprintf(stderr, "[0000] read_chunk: %" PRId64 ", work_chunk_size: %" PRId64 ", nseq: %d\n",
+            fprintf(stderr, "[INFO] read_chunk: %" PRId64 ", work_chunk_size: %" PRId64 ", nseq: %d\n",
                     aux->task_size, sz, ret->n_seqs);
 
         if (ret->seqs == 0) {
@@ -227,7 +227,7 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
             for (int i = 0; i < ret->n_seqs; ++i) size += ret->seqs[i].l_seq;
 
             if (bwa_verbose >= 3)
-                fprintf(stderr, "\t[0000][ M::%s] read %d sequences (%ld bp)...\n",
+                fprintf(stderr, "\t[INFO][ M::%s] read %d sequences (%ld bp)...\n",
                         __func__, ret->n_seqs, (long)size);
         }
 
@@ -239,7 +239,7 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
         if (w.nreads < ret->n_seqs)
         {
             if (bwa_verbose >= 3)
-                fprintf(stderr, "[0000] Reallocating initial memory allocations!!\n");
+                fprintf(stderr, "[INFO] Reallocating initial memory allocations!!\n");
             free(w.regs); free(w.chain_ar); free(w.seedBuf);
             w.nreads = ret->n_seqs;
             w.regs = (mem_alnreg_v *) calloc(w.nreads, sizeof(mem_alnreg_v));
@@ -249,7 +249,7 @@ ktp_data_t *kt_pipeline(void *shared, int step, void *data, mem_opt_t *opt, work
         }
 
         if (bwa_verbose >= 3)
-            fprintf(stderr, "[0000] Calling mem_process_seqs.., task: %d\n", task++);
+            fprintf(stderr, "[INFO] Calling mem_process_seqs.., task: %d\n", task++);
 
         uint64_t tim = __rdtsc();
         if (opt->flag & MEM_F_SMARTPE)
@@ -384,7 +384,7 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
     int tn = numa_num_task_nodes();
     int tcc = numa_num_configured_cpus();
     if (bwa_verbose >= 3)
-        fprintf(stderr, "num_cpus: %d, num_numas: %d, configured cpus: %d\n", tc, tn, tcc);
+        fprintf(stderr, "[INFO] num_cpus: %d, num_numas: %d, configured cpus: %d\n", tc, tn, tcc);
     int ht = HTStatus();
     if (ht) deno = 2;
 
@@ -467,7 +467,7 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
     /* All memory allocation */
     memoryAlloc(aux, w, nreads, nthreads);
     if (bwa_verbose >= 3)
-        fprintf(stderr, "* Threads used (compute): %d\n", nthreads);
+        fprintf(stderr, "[INFO] Threads used (compute): %d\n", nthreads);
 
     /* pipeline using pthreads */
     ktp_t aux_;
@@ -489,7 +489,7 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
     assert(pthread_ret == 0);
 
     if (bwa_verbose >= 3)
-        fprintf(stderr, "* No. of pipeline threads: %d\n\n", p_nt);
+        fprintf(stderr, "[INFO] No. of pipeline threads: %d\n\n", p_nt);
     aux_.workers = (ktp_worker_t*) malloc(p_nt * sizeof(ktp_worker_t));
     assert(aux_.workers != NULL);
 
@@ -521,7 +521,7 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
     /***** pipeline ends ******/
 
     if (bwa_verbose >= 3)
-        fprintf(stderr, "[0000] Computation ends..\n");
+        fprintf(stderr, "[INFO] [%s] Computation ends..\n", time_stamp());
 
     /* Dealloc memory allcoated in the header section */
     free(w.chain_ar);
@@ -882,7 +882,7 @@ int main_mem(int argc, char *argv[])
     uint64_t tim = __rdtsc();
 
     if (bwa_verbose >= 3)
-        fprintf(stderr, "* Ref file: %s\n", argv[optind]);
+        fprintf(stderr, "[INFO] Ref file: %s\n", argv[optind]);
     /* check for max locked memory */
     char *bwt;
     asprintf(&bwt, "%s.bwt.2bit.64", argv[optind]);
@@ -907,15 +907,19 @@ int main_mem(int argc, char *argv[])
     // reading ref string from the file
     tim = __rdtsc();
     if (bwa_verbose >= 3)
-        fprintf(stderr, opt->use_mmap ? "* Reading reference genome (mmap)..\n" :
-                "* Reading reference genome..\n");
+	{
+        if (opt->use_mmap)
+            fprintf(stderr, "[INFO] [%s] Reading reference genome (mmap)..\n", time_stamp());
+        else
+            fprintf(stderr, "[INFO] [%s] Reading reference genome..\n", time_stamp());
+	}
 
     char binary_seq_file[PATH_MAX];
     strcpy_s(binary_seq_file, PATH_MAX, argv[optind]);
     strcat_s(binary_seq_file, PATH_MAX, ".0123");
 
     if (bwa_verbose >= 3)
-        fprintf(stderr, "* Binary seq file = %s\n", binary_seq_file);
+        fprintf(stderr, "[INFO] Binary seq file = %s\n", binary_seq_file);
     int64_t rlen = 0;
     if (aux.opt->use_mmap)
     {
@@ -955,8 +959,8 @@ int main_mem(int argc, char *argv[])
     }
     if (bwa_verbose >= 3)
     {
-        fprintf(stderr, "* Reference genome size: %" PRId64 " bp\n", rlen);
-        fprintf(stderr, "* Done reading reference genome!!\n\n");
+        fprintf(stderr, "[INFO] Reference genome size: %" PRId64 " bp\n", rlen);
+        fprintf(stderr, "[INFO] [%s] Done reading reference genome!!\n\n", time_stamp());
     }
 
     if (ignore_alt)

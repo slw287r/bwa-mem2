@@ -591,10 +591,10 @@ void FMI_search::load_index()
         info("%ld,\t%lu\n", x, (unsigned long)count[x]);
     info("\n");  
 
-    info("* Reading other elements of the index from files %s\n", ref_file_name);
+    info("[INFO] [%s] Reading other elements of the index from files %s\n", time_stamp(), ref_file_name);
     bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 0);
 
-    info("* Done reading Index!!\n");
+    info("[INFO] [%s] Done reading Index!!\n", time_stamp());
 }
 
 void *mmap_index(void *arg)
