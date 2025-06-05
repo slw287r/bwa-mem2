@@ -586,14 +586,14 @@ void FMI_search::load_index()
         }
         #endif
     }
-    fputc('\n', stderr)
+    fputc('\n', stderr);
     info("sentinel_index: %ld\n", x);    
     #endif
 
     info("[Count:\n");
     for(x = 0; x < 5; x++)
         info("%ld,\t%lu\n", x, (unsigned long)count[x]);
-    fputc('\n', stderr)
+    fputc('\n', stderr);
 
     info("[%s] Reading other elements of the index from files %s\n", time_stamp().c_str(), ref_file_name);
     bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 0);
