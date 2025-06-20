@@ -607,7 +607,7 @@ static void usage(const mem_opt_t *opt)
     fprintf(stderr, "   -5            for split alignment, take the alignment with the smallest coordinate as primary\n");
     fprintf(stderr, "   -q            don't modify mapQ of supplementary alignments\n");
     fprintf(stderr, "   -K INT        process INT input bases in each batch regardless of nThreads (for reproducibility) []\n");
-    fprintf(stderr, "   -v INT        verbose level: 1=error, 2=warning, 3=message, 4+=debugging [%d]\n", bwa_verbose);
+    fprintf(stderr, "   -v INT        verbose level: 1=[ERROR], 2=[WARN], 3=[INFO], 4+=[DEBUG] [%d]\n", bwa_verbose);
     fprintf(stderr, "   -T INT        minimum score to output [%d]\n", opt->T);
     fprintf(stderr, "   -h INT[,INT]  if there are <INT hits with score >80%% of the max score, output all in XA [%d,%d]\n", opt->max_XA_hits, opt->max_XA_hits_alt);
     fprintf(stderr, "   -a            output all alignments for SE or unpaired PE\n");
