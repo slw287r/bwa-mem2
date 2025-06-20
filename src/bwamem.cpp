@@ -1270,12 +1270,14 @@ void mem_process_seqs(mem_opt_t *opt,
     //int n_ = (opt->flag & MEM_F_PE) ? n : n;   // this requires n%2==0
     int n_ = n;
     
-    uint64_t tim = __rdtsc();   
-    fprintf(stderr, "[INFO] 1. Calling kt_for - worker_bwt\n");
+    uint64_t tim = __rdtsc();
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "[INFO] 1. Calling kt_for - worker_bwt\n");
     
     kt_for(worker_bwt, &w, n_); // SMEMs (+SAL)
 
-    fprintf(stderr, "[INFO] 2. Calling kt_for - worker_aln\n");
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "[INFO] 2. Calling kt_for - worker_aln\n");
     
     kt_for(worker_aln, &w, n_); // BSW
     tprof[WORKER10][0] += __rdtsc() - tim;      
@@ -1287,22 +1289,25 @@ void mem_process_seqs(mem_opt_t *opt,
             memcpy_bwamem(pes, 4 * sizeof(mem_pestat_t), pes0, 4 * sizeof(mem_pestat_t), (char *)__FILE__, __LINE__); // if pes0 != NULL, set the insert-size
                                                          // distribution as pes0
         else {
-            fprintf(stderr, "[INFO] Inferring insert size distribution of PE reads from data, "
-                    "l_pac: %" PRId64 ", n: %d\n", w.fmi->idx->bns->l_pac, n);
+            if (bwa_verbose >= 3)
+                fprintf(stderr, "[INFO] Inferring insert size distribution of PE reads from data, "
+                        "l_pac: %" PRId64 ", n: %d\n", w.fmi->idx->bns->l_pac, n);
             mem_pestat(opt, w.fmi->idx->bns->l_pac, n, w.regs, pes); // otherwise, infer the insert size
                                                          // distribution from data
         }
     }
     
     tim = __rdtsc();
-    fprintf(stderr, "[INFO] 3. Calling kt_for - worker_sam\n");
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "[INFO] 3. Calling kt_for - worker_sam\n");
     
     kt_for(worker_sam, &w,  n_);   // SAM   
     tprof[WORKER20][0] += __rdtsc() - tim;
 
-    fprintf(stderr, "       [M::%s] Processed %d reads in %.3f "
-            "CPU sec, %.3f real sec\n",
-            __func__, n, cputime() - ctime, realtime() - rtime);
+    if (bwa_verbose >= 3)
+        fprintf(stderr, "       [M::%s] Processed %d reads in %.3f "
+                "CPU sec, %.3f real sec\n",
+                __func__, n, cputime() - ctime, realtime() - rtime);
 
 }
 
