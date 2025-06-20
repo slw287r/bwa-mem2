@@ -69,22 +69,26 @@ int main(int argc, char* argv[])
         kstring_t pg = {0,0,0};
         extern char *bwa_pg;
 
-        fprintf(stderr, "-----------------------------\n");
+        if (bwa_verbose >= 3)
+        {
+            fprintf(stderr, "-----------------------------\n");
 #if __AVX512BW__
-        fprintf(stderr, "Executing in AVX512 mode!!\n");
+            fprintf(stderr, "Executing in AVX512 mode!!\n");
 #elif __AVX2__
-        fprintf(stderr, "Executing in AVX2 mode!!\n");
+            fprintf(stderr, "Executing in AVX2 mode!!\n");
 #elif __AVX__
-        fprintf(stderr, "Executing in AVX mode!!\n");        
+            fprintf(stderr, "Executing in AVX mode!!\n");        
 #elif __SSE4_2__
-        fprintf(stderr, "Executing in SSE4.2 mode!!\n");
+            fprintf(stderr, "Executing in SSE4.2 mode!!\n");
 #elif __SSE4_1__
-        fprintf(stderr, "Executing in SSE4.1 mode!!\n");        
+            fprintf(stderr, "Executing in SSE4.1 mode!!\n");        
 #endif
-        fprintf(stderr, "-----------------------------\n");
+            fprintf(stderr, "-----------------------------\n");
+        }
 
         #if SA_COMPRESSION
-        fprintf(stderr, "[INFO] SA compression enabled with xfactor: %d\n", 0x1 << SA_COMPX);
+        if (bwa_verbose >= 3)
+            fprintf(stderr, "[INFO] SA compression enabled with xfactor: %d\n", 0x1 << SA_COMPX);
         #endif
         
         ksprintf(&pg, "@PG\tID:bwa-mem2\tPN:bwa-mem2\tVN:%s\tCL:%s", PACKAGE_VERSION, argv[0]);
@@ -107,7 +111,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "ERROR: unknown command '%s'\n", argv[1]);
         return 1;
     }
-    if (ret == 0) {
+    if (ret == 0 && bwa_verbose >= 3) {
         fprintf(stderr, "\nImportant parameter settings: \n");
         fprintf(stderr, "\tBATCH_SIZE: %d\n", BATCH_SIZE);
         fprintf(stderr, "\tMAX_SEQ_LEN_REF: %d\n", MAX_SEQ_LEN_REF);

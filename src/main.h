@@ -41,5 +41,6 @@ Contacts: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@
 #include "fastmap.h"
 #include "version.h"
 
+extern int bwa_verbose;
 int bwa_index(int argc, char *argv[]);
 #endif
