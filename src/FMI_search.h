@@ -53,6 +53,7 @@ Authors: Sanchit Misra <sanchit.misra@intel.com>; Vasimuddin Md <vasimuddin.md@i
 #include "bwa.h"
 #include "utils.h"
 
+extern int bwa_verbose;
 #define DUMMY_CHAR 6
 #define PURGE_LOCK "/dev/shm/.bm2_ref_purge_mtx"
 #define assert_not_null(x, size, cur_alloc) \
