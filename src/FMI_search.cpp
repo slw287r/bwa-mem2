@@ -586,7 +586,8 @@ void FMI_search::load_index()
         }
         #endif
     }
-    fputc('\n', stderr);
+    if (bwa_verbose >= 3)
+        fputc('\n', stderr);
     info("sentinel_index: %ld\n", x);    
     #endif
 
@@ -683,7 +684,8 @@ void *mmap_index(void *arg)
     th->info("Count:\n");
     for(x = 0; x < 5; x++)
         th->info("%ld,\t%lu\n", x, (unsigned long)th->count[x]);
-    fputc('\n', stderr);
+    if (bwa_verbose >= 3)
+        fputc('\n', stderr);
     th->info("[%s] Reading other elements of the index from files %s\n",
             time_stamp().c_str(), ref_file_name);
     th->bwa_idx_load_ele(ref_file_name, BWA_IDX_ALL, 1);
