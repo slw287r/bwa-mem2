@@ -571,6 +571,27 @@ static void update_a(mem_opt_t *opt, const mem_opt_t *opt0)
 
 static void usage(const mem_opt_t *opt)
 {
+
+    if (bwa_verbose >= 3)
+    {
+        fprintf(stderr, "--------------------------------------\n");
+#if __AVX512BW__
+        fprintf(stderr, "Executing in AVX512 mode!!\n");
+#elif __AVX2__
+        fprintf(stderr, "Executing in AVX2 mode!!\n");
+#elif __AVX__
+        fprintf(stderr, "Executing in AVX mode!!\n");        
+#elif __SSE4_2__
+        fprintf(stderr, "Executing in SSE4.2 mode!!\n");
+#elif __SSE4_1__
+        fprintf(stderr, "Executing in SSE4.1 mode!!\n");        
+#endif
+
+    #if SA_COMPRESSION
+        fprintf(stderr, "SA compression enabled with xfactor: %d\n", 0x1 << SA_COMPX);
+    #endif
+        fprintf(stderr, "--------------------------------------\n\n");
+    }
     fprintf(stderr, "Usage: \033[31mbwa-mem2\033[0m mem [options] <idxbase> <in1.fq> [in2.fq]\n");
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  Algorithm options:\n");
