@@ -590,7 +590,7 @@ static void usage(const mem_opt_t *opt)
     #if SA_COMPRESSION
         fprintf(stderr, "SA compression enabled with xfactor: %d\n", 0x1 << SA_COMPX);
     #endif
-        fprintf(stderr, "--------------------------------------\n\n");
+        fprintf(stderr, "--------------------------------------\n");
     }
     fprintf(stderr, "Usage: \033[31mbwa-mem2\033[0m mem [options] <idxbase> <in1.fq> [in2.fq]\n");
     fprintf(stderr, "Options:\n");
@@ -642,7 +642,7 @@ static void usage(const mem_opt_t *opt)
     fprintf(stderr, "                 FR orientation only. [inferred]\n");
     fprintf(stderr, "   -l INT        maximum expected read length, needed for memory allocation [%d]\n", opt->max_read_length);
     fprintf(stderr, "   -z            use MMAP to access reference structures\n");
-    fprintf(stderr, "   -Z INT        time out \033[31mbwa-mem2\033[0m mem in case MMAP (via -z) hangs for more than INT minutes []\n");
+    fprintf(stderr, "   -Z INT        time out in case MMAP (via -z) hangs for more than INT minutes []\n");
     fprintf(stderr, "Note: Please read the man page for detailed description of the command line and options.\n");
 }
 
