@@ -631,8 +631,8 @@ static void usage(const mem_opt_t *opt)
     fprintf(stderr, "   -v INT        verbose level: 1=[ERROR], 2=[WARN], 3=[INFO], 4+=[DEBUG] [%d]\n", bwa_verbose);
     fprintf(stderr, "   -T INT        minimum score to output [%d]\n", opt->T);
     fprintf(stderr, "   -h INT[,INT]  if there are <INT hits with score >80%% of the max score, output all in XA [%d,%d]\n", opt->max_XA_hits, opt->max_XA_hits_alt);
-    fprintf(stderr, "   -u FLOAT      adjust the above >80%% threshold (0.8 for 80%%) [%.2f]\n", opt->XA_drop_ratio);
-    fprintf(stderr, "   -a            output all alignments for SE or unpaired PE\n");
+    fprintf(stderr, "   -u FLOAT      the fraction of the max score to use with -h (the `-z' in bwa mem; get more XAs with a smaller -u and a larger -y value) [%.2f]\n", opt->XA_drop_ratio);
+    fprintf(stderr, "   -a            output all alignments for SE or unpaired PE (get more suboptimal alignments with a smaller -D value)\n");
     fprintf(stderr, "   -C            append FASTA/FASTQ comment to SAM output\n");
     fprintf(stderr, "   -V            output the reference FASTA header in the XR tag\n");
     fprintf(stderr, "   -Y            use soft clipping for supplementary alignments\n");
