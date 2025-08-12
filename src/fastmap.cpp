@@ -632,9 +632,9 @@ static void usage(const mem_opt_t *opt)
     fprintf(stderr, "   -T INT        minimum score to output [%d]\n", opt->T);
     fprintf(stderr, "   -h INT[,INT]  if there are <INT hits with score >80%% of the max score, output all in XA [%d,%d]\n", opt->max_XA_hits, opt->max_XA_hits_alt);
     fprintf(stderr, "   -u FLOAT      the fraction of the max score to use with -h (the `-z' in bwa mem;");
-    fprintf(stderr, "                 get more XAs with a smaller -u and a larger -y value) [%.2f]\n", opt->XA_drop_ratio);
+    fprintf(stderr, "                 get more XAs with smaller -u, -D and larger -y, -h values, e.g. -D0 -u0 -y1024 -h4096) [%.2f]\n", opt->XA_drop_ratio);
     fprintf(stderr, "   -a            output all alignments for SE or unpaired PE (get more suboptimal");
-    fprintf(stderr, "                 alignments with a smaller -D value)\n");
+    fprintf(stderr, "                 alignments with smaller -D and larger -y values, e.g. -aD0 -y1024)\n");
     fprintf(stderr, "   -C            append FASTA/FASTQ comment to SAM output\n");
     fprintf(stderr, "   -V            output the reference FASTA header in the XR tag\n");
     fprintf(stderr, "   -Y            use soft clipping for supplementary alignments\n");
