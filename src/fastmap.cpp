@@ -631,6 +631,7 @@ static void usage(const mem_opt_t *opt)
     fprintf(stderr, "   -v INT        verbose level: 1=[ERROR], 2=[WARN], 3=[INFO], 4+=[DEBUG] [%d]\n", bwa_verbose);
     fprintf(stderr, "   -T INT        minimum score to output [%d]\n", opt->T);
     fprintf(stderr, "   -h INT[,INT]  if there are <INT hits with score >80%% of the max score, output all in XA [%d,%d]\n", opt->max_XA_hits, opt->max_XA_hits_alt);
+    fprintf(stderr, "   -u FLOAT      adjust the above >80%% threshold [%.2f], 0.8 for 80%%\n", opt->XA_drop_ratio);
     fprintf(stderr, "   -a            output all alignments for SE or unpaired PE\n");
     fprintf(stderr, "   -C            append FASTA/FASTQ comment to SAM output\n");
     fprintf(stderr, "   -V            output the reference FASTA header in the XR tag\n");
@@ -674,7 +675,7 @@ int main_mem(int argc, char *argv[])
 
     /* Parse input arguments */
     // comment: added option '5' in the list
-    while ((c = getopt(argc, argv, "51qpaMCSPVYjk:c:v:s:r:t:R:A:B:O:E:U:w:L:d:T:Q:D:m:I:N:W:x:G:h:y:K:X:H:o:f:l:zZ:")) >= 0)
+    while ((c = getopt(argc, argv, "51qpaMCSPVYjk:c:v:s:r:t:R:A:B:O:E:U:w:L:d:T:Q:D:m:I:N:W:x:G:h:u:y:K:X:H:o:f:l:zZ:")) >= 0)
     {
         if (c == 'k') opt->min_seed_len = atoi(optarg), opt0.min_seed_len = 1;
         else if (c == '1') no_mt_io = 1;
@@ -736,8 +737,9 @@ int main_mem(int argc, char *argv[])
             if (*p != 0 && ispunct(*p) && isdigit(p[1]))
                 opt->max_XA_hits_alt = strtol(p+1, &p, 10);
         }
+        else if (c == 'u') opt->XA_drop_ratio = atof(optarg), opt0.XA_drop_ratio = 1.;
         else if (c == 'Q')
-        {
+        st{
             opt0.mapQ_coef_len = 1;
             opt->mapQ_coef_len = atoi(optarg);
             opt->mapQ_coef_fac = opt->mapQ_coef_len > 0? log(opt->mapQ_coef_len) : 0;
