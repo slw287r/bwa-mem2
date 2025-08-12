@@ -739,7 +739,7 @@ int main_mem(int argc, char *argv[])
         }
         else if (c == 'u') opt->XA_drop_ratio = atof(optarg), opt0.XA_drop_ratio = 1.;
         else if (c == 'Q')
-        st{
+        {
             opt0.mapQ_coef_len = 1;
             opt->mapQ_coef_len = atoi(optarg);
             opt->mapQ_coef_fac = opt->mapQ_coef_len > 0? log(opt->mapQ_coef_len) : 0;
