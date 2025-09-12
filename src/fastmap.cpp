@@ -1002,10 +1002,8 @@ int main_mem(int argc, char *argv[])
         if (aux.opt->use_mmap)
             aux.fmi->unmap_index();
         delete aux.fmi;
-        // kclose(ko);
         return 1;
     }
-    // fp = gzopen(argv[optind + 1], "r");
     fp = gzdopen(fd, "r");
     aux.ks = kseq_init(fp);
 
@@ -1030,7 +1028,6 @@ int main_mem(int argc, char *argv[])
                     fclose(aux.fp);
                 delete aux.fmi;
                 kclose(ko);
-                // kclose(ko2);
                 return 1;
             }
             fp2 = gzdopen(fd2, "r");
@@ -1041,13 +1038,28 @@ int main_mem(int argc, char *argv[])
     }
 
     bwa_print_sam_hdr(aux.fmi->idx->bns, hdr_line, aux.fp);
+    // handle empty stdin
+    if (!strcmp(argv[optind + 1], "/dev/stdin") || !strcmp(argv[optind + 1], "-"))
+    {
+        struct stat st;
+        if (fstat(fileno(stdin), &st) == 0 && st.st_size == 0)
+        {
+            fprintf(stderr, "[WARNING] stdin is empty. Exiting without processing.\n");
+            if (!aux.opt->use_mmap)
+                _mm_free(ref_string);
+            if (is_o) fclose(aux.fp);
+            free(hdr_line);
+            gzclose(fp);
+			kclose(ko);
+            free(opt);
+            return 0;
+        }
+    }
 
     if (fixed_chunk_size > 0)
         aux.task_size = fixed_chunk_size;
-    else {
-        //aux.task_size = 10000000 * opt->n_threads; //aux.actual_chunk_size;
-        aux.task_size = opt->chunk_size * opt->n_threads; //aux.actual_chunk_size;
-    }
+    else
+        aux.task_size = opt->chunk_size * opt->n_threads;
     tprof[MISC][1] = opt->chunk_size = aux.actual_chunk_size = aux.task_size;
 
     tim = __rdtsc();
