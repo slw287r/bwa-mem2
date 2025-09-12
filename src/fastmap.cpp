@@ -62,23 +62,20 @@ void __cpuid(unsigned int i, unsigned int cpuid[4]) {
 int is_stdin_empty(void)
 {
     fd_set fds;
-    struct timeval tv = {0, 0}; // No wait time
     FD_ZERO(&fds);
     FD_SET(STDIN_FILENO, &fds);
-
-    // Check if stdin is ready for reading
-    int result = select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv);
+    int result = select(STDIN_FILENO + 1, &fds, NULL, NULL, NULL);
     if (result == -1)
     {
         perror("select");
-        return -1; // Error
+        return -1;
     }
     if (!FD_ISSET(STDIN_FILENO, &fds))
-        return 1; // No data available (empty)
-
-    // Pipe is ready, but check if it's actually empty (EOF)
+        return 1;
+    // Pipe is ready, check if it's data or EOF
     int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
-    if (flags == -1) {
+    if (flags == -1)
+    {
         perror("fcntl get");
         return -1;
     }
@@ -87,18 +84,17 @@ int is_stdin_empty(void)
         perror("fcntl set nonblock");
         return -1;
     }
-
     int c = fgetc(stdin);
-    if (c == EOF && feof(stdin)) {
+    if (c == EOF && feof(stdin))
+    {
         clearerr(stdin);
         if (fcntl(STDIN_FILENO, F_SETFL, flags) == -1)
         {
             perror("fcntl restore");
             return -1;
         }
-        return 1;
+        return 1; // stdin is empty (EOF reached)
     }
-
     if (c != EOF)
         ungetc(c, stdin);
     clearerr(stdin);
@@ -107,7 +103,7 @@ int is_stdin_empty(void)
         perror("fcntl restore");
         return -1; // Error
     }
-    return 0;
+    return 0; // Data is available
 }
 
 int HTStatus()
