@@ -1038,23 +1038,6 @@ int main_mem(int argc, char *argv[])
     }
 
     bwa_print_sam_hdr(aux.fmi->idx->bns, hdr_line, aux.fp);
-    // handle empty stdin
-    if (!strcmp(argv[optind + 1], "/dev/stdin") || !strcmp(argv[optind + 1], "-"))
-    {
-        struct stat st;
-        if (fstat(fileno(stdin), &st) == 0 && st.st_size == 0)
-        {
-            fprintf(stderr, "[WARNING] stdin is empty. Exiting without processing.\n");
-            if (!aux.opt->use_mmap)
-                _mm_free(ref_string);
-            if (is_o) fclose(aux.fp);
-            free(hdr_line);
-            gzclose(fp);
-			kclose(ko);
-            free(opt);
-            return 0;
-        }
-    }
 
     if (fixed_chunk_size > 0)
         aux.task_size = fixed_chunk_size;
