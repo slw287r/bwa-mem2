@@ -80,5 +80,6 @@ typedef struct {
 void *kopen(const char *fn, int *_fd);
 int kclose(void *a);
 int main_mem(int argc, char *argv[]);
+int is_stdin_empty(void);
 
 #endif

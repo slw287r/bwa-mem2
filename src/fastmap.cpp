@@ -59,6 +59,56 @@ void __cpuid(unsigned int i, unsigned int cpuid[4]) {
 #endif
 }
 
+int is_stdin_empty(void)
+{
+    fd_set fds;
+    struct timeval tv = {0, 0}; // No wait time
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+
+    // Check if stdin is ready for reading
+    int result = select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv);
+    if (result == -1)
+    {
+        perror("select");
+        return -1; // Error
+    }
+    if (!FD_ISSET(STDIN_FILENO, &fds))
+        return 1; // No data available (empty)
+
+    // Pipe is ready, but check if it's actually empty (EOF)
+    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    if (flags == -1) {
+        perror("fcntl get");
+        return -1;
+    }
+    if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1)
+    {
+        perror("fcntl set nonblock");
+        return -1;
+    }
+
+    int c = fgetc(stdin);
+    if (c == EOF && feof(stdin)) {
+        clearerr(stdin);
+        if (fcntl(STDIN_FILENO, F_SETFL, flags) == -1)
+        {
+            perror("fcntl restore");
+            return -1;
+        }
+        return 1;
+    }
+
+    if (c != EOF)
+        ungetc(c, stdin);
+    clearerr(stdin);
+    if (fcntl(STDIN_FILENO, F_SETFL, flags) == -1)
+    {
+        perror("fcntl restore");
+        return -1; // Error
+    }
+    return 0;
+}
 
 int HTStatus()
 {
@@ -1038,6 +1088,8 @@ int main_mem(int argc, char *argv[])
     }
 
     bwa_print_sam_hdr(aux.fmi->idx->bns, hdr_line, aux.fp);
+    if ((!strcmp(argv[optind + 1], "/dev/stdin") || !strcmp(argv[optind + 1], "-")) && is_stdin_empty())
+        goto empty_exit;
 
     if (fixed_chunk_size > 0)
         aux.task_size = fixed_chunk_size;
@@ -1050,6 +1102,7 @@ int main_mem(int argc, char *argv[])
     /* Relay process function */
     process(&aux, fp, fp2, no_mt_io? 1:2);
 
+empty_exit:
     tprof[PROCESS][0] += __rdtsc() - tim;
 
     // free memory
