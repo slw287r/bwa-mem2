@@ -603,7 +603,7 @@ void FMI_search::load_index()
     info("[%s] Done reading Index!!\n", time_stamp().c_str());
 }
 
-void *mmap_index(void *arg)
+void FMI_search::mmap_index(void *arg)
 {
     FMI_search *th = (FMI_search *)arg;
     th->one_hot_mask_array = (uint64_t *)_mm_malloc(64 * sizeof(uint64_t), 64);

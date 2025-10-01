@@ -119,6 +119,7 @@ class FMI_search: public indexEle
     int build_index();
     void load_index();
     void unmap_index();
+    void mmap_index(void *arg);
 
     void getSMEMs(uint8_t *enc_qdb,
                   int32_t numReads,
@@ -219,7 +220,6 @@ private:
     int use_mmap;
     void *cp_map;
     int64_t cp_size;
-    friend void *mmap_index(void *arg);
 };
 
 #endif
