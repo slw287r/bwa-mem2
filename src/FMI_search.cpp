@@ -113,7 +113,6 @@ void alarm_handler(int)
     if (!mmap_index_done)
     {
         fprintf(stderr, "\033[31mReference memory-mapping timed out...\033[0m\n");
-        pthread_cancel(mmap_thread_id);
         char commit_suicide[PATH_MAX];
         snprintf(commit_suicide, PATH_MAX, "kill -9 %d &>/dev/null", getpid());
         // purge cache
