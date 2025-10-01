@@ -695,20 +695,6 @@ void *mmap_index(void *arg)
     return NULL;
 }
 
-void FMI_search::init_mmap_index()
-{
-    if (pthread_create(&mmap_thread_id, NULL, &mmap_index, this))
-    {
-        error("Error creating mmap thread\n");
-        exit(EXIT_FAILURE);
-    }
-}
-
-void FMI_search::wait_mmap_index()
-{
-    (void)pthread_join(mmap_thread_id, NULL);
-}
-
 void FMI_search::unmap_index()
 {
     if (use_mmap)

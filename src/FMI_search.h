@@ -194,8 +194,6 @@ class FMI_search: public indexEle
 
     int64_t reference_seq_len;
     int64_t sentinel_index;
-    void init_mmap_index(void);
-    void wait_mmap_index(void);
 private:
     int verbose;
     void info(const char *format, ...);
