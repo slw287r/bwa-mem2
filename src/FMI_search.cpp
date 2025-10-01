@@ -108,7 +108,7 @@ int lock_file(int fd)
     return 1;  // Lock acquired
 }
 
-void alarm_handler(int)
+void timeout_handler(int)
 {
     if (!mmap_index_done)
     {

@@ -963,11 +963,15 @@ int main_mem(int argc, char *argv[])
     aux.fmi = new FMI_search(argv[optind], opt->use_mmap, bwa_verbose);
     if (opt->use_mmap)
     {
-        signal(SIGALRM, alarm_handler);
+        struct sigaction sa;
+        sa.sa_handler = timeout_handler;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = 0;
+        sigaction(SIGALRM, &sa, NULL);
         alarm(std::max(1, opt->mmap_timeout == INT_MAX ? INT_MAX :
-					(int)(opt->mmap_timeout * 60)));
+                    (int)(opt->mmap_timeout * 60)));
         aux.fmi->mmap_index();
-		alarm(0);
+        alarm(0);
     }
     else
         aux.fmi->load_index();

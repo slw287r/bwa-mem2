@@ -107,7 +107,7 @@ typedef struct
 void error(const char *format, ...);
 int lock_file(int fd);
 void purge(const uint64_t s);
-void alarm_handler(int);
+void timeout_handler(int);
 
 class FMI_search: public indexEle
 {
