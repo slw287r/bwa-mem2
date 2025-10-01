@@ -123,7 +123,7 @@ void alarm_handler(int)
         if (fd == -1)
             error("Error creating %s\n", PURGE_LOCK);
         if (avphys_mem * 3 < phys_mem && lock_file(fd))
-            purge(phys_mem / 2);
+            purge(phys_mem / 3);
         clean(PURGE_LOCK);
         close(fd);
 #endif
