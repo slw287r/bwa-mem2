@@ -53,6 +53,11 @@ int aligned_p(void *p)
     return 0 == ((long)p & (sysconf(_SC_PAGESIZE) - 1));
 }
 
+int is_mincore_page_resident(char p)
+{
+    return p & 0x1;
+}
+
 void increment_nofile_rlimit()
 {
     struct rlimit r;
@@ -73,7 +78,7 @@ void increment_nofile_rlimit()
 
 static void vmtouch_core(char *path, bool touch)
 {
-    int fd = -1;
+    int i, fd = -1;
     void *mem = 0;
     struct stat sb;
     int64_t len_of_file = 0;
