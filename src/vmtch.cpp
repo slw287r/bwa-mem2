@@ -85,6 +85,7 @@ static void vmtouch_core(char *path, bool touch)
     int64_t len_of_range = 0;
     int64_t pages_in_range;
     int res, open_flags;
+    unsigned char *mincore_array = NULL;
 retry_open:
     open_flags = O_RDONLY;
 #if defined(O_NOATIME)
@@ -136,7 +137,6 @@ retry_open:
     }
     else
         len_of_range = len_of_file - offset;
-    unsigned char *mincore_array = NULL;
     mem = mmap(NULL, len_of_range, PROT_READ, MAP_SHARED, fd, offset);
     if (mem == MAP_FAILED)
     {
