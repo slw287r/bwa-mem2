@@ -9,7 +9,11 @@ struct dev_and_inode
     ino_t ino;
 };
 
+long pagesize = sysconf(_SC_PAGESIZE);
+int64_t total_pages = 0;
+int64_t total_pages_in_core = 0;
 int64_t offset = 0;
+unsigned int junk_counter; // just to prevent any compiler optimizations
 int curr_crawl_depth = 0;
 ino_t crawl_inodes[PATH_MAX];
 
@@ -25,17 +29,23 @@ static void fatal(const char *fmt, ...)
     va_start(ap, fmt);
     vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
-    fprintf(stderr, "FATAL: %s\n", buf);
+    fprintf(stderr, "[FATAL]: %s\n", buf);
     exit(1);
 }
 
-static void warning(const char *fmt, ...) {
+static void warning(const char *fmt, ...)
+{
     va_list ap;
     char buf[4096];
     va_start(ap, fmt);
     vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
-    fprintf(stderr, "WARNING: %s\n", buf);
+    fprintf(stderr, "[WARNING]: %s\n", buf);
+}
+
+int64_t bytes2pages(int64_t bytes)
+{
+    return (bytes+pagesize-1) / pagesize;
 }
 
 int aligned_p(void *p)
@@ -61,13 +71,14 @@ void increment_nofile_rlimit()
     }
 }
 
-static void vmtouch_core(char *path)
+static void vmtouch_core(char *path, bool touch)
 {
     int fd = -1;
     void *mem = 0;
     struct stat sb;
-    int64_t len_of_file=0;
-    int64_t len_of_range=0;
+    int64_t len_of_file = 0;
+    int64_t len_of_range = 0;
+    int64_t pages_in_range;
     int res, open_flags;
 retry_open:
     open_flags = O_RDONLY;
@@ -126,7 +137,22 @@ retry_open:
         warning("unable to mmap file %s (%s), skipping", path, strerror(errno));
         goto bail;
     }
-    if (!aligned_p(mem)) fatal("mmap(%s) wasn't page aligned", path);
+    if (!aligned_p(mem))
+        fatal("mmap(%s) wasn't page aligned", path);
+    pages_in_range = bytes2pages(len_of_range);
+    total_pages += pages_in_range;
+    char *mincore_array = malloc(pages_in_range);
+    if (!mincore_array)
+        fatal("Failed to allocate memory for mincore array (%s)", strerror(errno));
+    // 3rd arg to mincore is char* on BSD and unsigned char* on linux
+    if (mincore(mem, len_of_range, (void*)mincore_array))
+        fatal("mincore %s (%s)", path, strerror(errno));
+    for (i = 0; i < pages_in_range; ++i)
+        if (is_mincore_page_resident(mincore_array[i]))
+            total_pages_in_core++;
+    if (touch)
+      for (i = 0; i < pages_in_range; ++i)
+        junk_counter += ((char*)mem)[i*pagesize]; // <- actually reads each page
 bail:
     if (mem && munmap(mem, len_of_range))
         warning("unable to munmap file %s (%s)", path, strerror(errno));
@@ -165,18 +191,16 @@ static inline int find_object(struct stat *st)
     return res != (void *) NULL;
 }
 
-void vmtouch(char *path)
+double vmtouch(char *path, bool touch)
 {
     struct stat sb;
     DIR *dirp;
     struct dirent *de;
-    char npath[PATH_MAX];
-    int i, res;
-    int tp_path_len = strlen(path);
-    if (path[tp_path_len-1] == '/' && tp_path_len > 1)
-        path[tp_path_len - 1] = '\0'; // prevent ugly double slashes when printing path names
+    char npath[PATH_MAX], *p;
+    int i, res, tp_path_len = strlen(path);
+    if (*(p = path + tp_path_len - 1) == '/' && tp_path_len > 1)
+        *p = '\0'; // prevent ugly double slashes when printing path names
     res = lstat(path, &sb);
-
     if (res)
     {
         warning("unable to stat %s (%s)", path, strerror(errno));
@@ -203,7 +227,6 @@ void vmtouch(char *path)
             else
                 add_object(&sb);
         }
-
         if (S_ISDIR(sb.st_mode))
         {
             for (i=0; i<curr_crawl_depth; i++)
@@ -238,7 +261,7 @@ void vmtouch(char *path)
                     goto bail;
                 }
                 curr_crawl_depth++;
-                vmtouch(npath);
+                vmtouch(npath, touch);
                 curr_crawl_depth--;
             }
 bail:
@@ -254,8 +277,9 @@ bail:
             return;
         }
         else if (S_ISREG(sb.st_mode) || S_ISBLK(sb.st_mode))
-            vmtouch_core(path);
+            vmtouch_core(path, touch);
         else
             warning("skipping non-regular file: %s", path);
     }
+	return total_pages ? 100.0 * total_pages_in_core / total_pages : 0.0f;
 }

@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <limits.h>
 #include <dirent.h>
 #include <err.h>
@@ -26,7 +27,7 @@
 extern "C" {
 #endif
 
-void vmtouch(char *path);
+double vmtouch(char *path, bool touch);
 
 #ifdef __cplusplus
 }
