@@ -209,14 +209,14 @@ double vmtouch(char *path, bool touch)
     if (res)
     {
         warning("unable to stat %s (%s)", path, strerror(errno));
-        return;
+        return 0.0f;
     }
     else
     {
         if (S_ISLNK(sb.st_mode))
         {
             warning("not following symbolic link %s", path);
-            return;
+            return 0.0f;
         }
         if (sb.st_nlink > 1)
         {
@@ -228,7 +228,7 @@ double vmtouch(char *path, bool touch)
              */
             if (find_object(&sb))
                 // we already saw the device and inode referenced by this file
-                return;
+                return 0.0f;
             else
                 add_object(&sb);
         }
@@ -239,7 +239,7 @@ double vmtouch(char *path, bool touch)
                 if (crawl_inodes[i] == sb.st_ino)
                 {
                     warning("symbolic link loop detected: %s", path);
-                    return;
+                    return 0.0f;
                 }
             }
             if (curr_crawl_depth == PATH_MAX)
@@ -255,7 +255,7 @@ double vmtouch(char *path, bool touch)
                     goto retry_opendir;
                 }
                 warning("unable to opendir %s (%s), skipping", path, strerror(errno));
-                return;
+                return 0.0f;
             }
             while((de = readdir(dirp)) != NULL)
             {
@@ -273,13 +273,13 @@ bail:
             if (closedir(dirp))
             {
                 warning("unable to closedir %s (%s)", path, strerror(errno));
-                return;
+                return 0.0f;
             }
         }
         else if (S_ISLNK(sb.st_mode))
         {
             warning("not following symbolic link %s", path);
-            return;
+            return 0.0f;
         }
         else if (S_ISREG(sb.st_mode) || S_ISBLK(sb.st_mode))
             vmtouch_core(path, touch);
