@@ -146,7 +146,7 @@ retry_open:
         fatal("mmap(%s) wasn't page aligned", path);
     pages_in_range = bytes2pages(len_of_range);
     total_pages += pages_in_range;
-    char *mincore_array = malloc(pages_in_range);
+    char *mincore_array = (char *)malloc(pages_in_range);
     if (!mincore_array)
         fatal("Failed to allocate memory for mincore array (%s)", strerror(errno));
     // 3rd arg to mincore is char* on BSD and unsigned char* on linux
