@@ -150,7 +150,7 @@ retry_open:
     if (!mincore_array)
         fatal("Failed to allocate memory for mincore array (%s)", strerror(errno));
     // 3rd arg to mincore is char* on BSD and unsigned char* on linux
-    if (mincore(mem, len_of_range, (void*)mincore_array))
+    if (mincore(mem, len_of_range, (unsigned char *)mincore_array))
         fatal("mincore %s (%s)", path, strerror(errno));
     for (i = 0; i < pages_in_range; ++i)
         if (is_mincore_page_resident(mincore_array[i]))
