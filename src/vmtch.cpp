@@ -9,13 +9,13 @@ struct dev_and_inode
     ino_t ino;
 };
 
-long pagesize = sysconf(_SC_PAGESIZE);
+int64_t offset = 0;
 int64_t total_pages = 0;
 int64_t total_pages_in_core = 0;
-int64_t offset = 0;
-unsigned int junk_counter; // just to prevent any compiler optimizations
+long pagesize = sysconf(_SC_PAGESIZE);
 int curr_crawl_depth = 0;
 ino_t crawl_inodes[PATH_MAX];
+unsigned int junk_counter; // just to prevent any compiler optimizations
 
 // remember all inodes (for files with inode count > 1) to find duplicates
 void *seen_inodes = NULL;
@@ -69,14 +69,15 @@ void increment_nofile_rlimit()
     {
         if (errno == EPERM)
         {
-            if (getuid() == 0 || geteuid() == 0) fatal("system open file limit reached");
+            if (getuid() == 0 || geteuid() == 0)
+                fatal("system open file limit reached");
             fatal("open file limit reached and unable to increase limit. retry as root");
         }
         fatal("increment_nofile_rlimit: setrlimit (%s)", strerror(errno));
     }
 }
 
-static void vmtouch_core(char *path, bool touch)
+static void vmtouch_core(char *path, bool do_touch)
 {
     int i, fd = -1;
     void *mem = 0;
@@ -129,7 +130,8 @@ retry_open:
     }
     else
         len_of_file = sb.st_size;
-    if (len_of_file == 0) goto bail;
+    if (len_of_file == 0)
+        goto bail;
     if (offset >= len_of_file)
     {
         warning("file %s smaller than offset, skipping", path);
@@ -137,28 +139,26 @@ retry_open:
     }
     else
         len_of_range = len_of_file - offset;
-    mem = mmap(NULL, len_of_range, PROT_READ, MAP_SHARED, fd, offset);
-    if (mem == MAP_FAILED)
+    if ((mem = mmap(NULL, len_of_range, PROT_READ, MAP_SHARED, fd, offset)) == MAP_FAILED)
     {
         warning("unable to mmap file %s (%s), skipping", path, strerror(errno));
         goto bail;
     }
     if (!aligned_p(mem))
         fatal("mmap(%s) wasn't page aligned", path);
-    pages_in_range = bytes2pages(len_of_range);
-    total_pages += pages_in_range;
-    mincore_array = (unsigned char *)malloc(pages_in_range);
-    if (!mincore_array)
+    total_pages += (pages_in_range = bytes2pages(len_of_range));
+    if (!(mincore_array = (unsigned char *)malloc(pages_in_range)))
         fatal("Failed to allocate memory for mincore array (%s)", strerror(errno));
     // 3rd arg to mincore is char* on BSD and unsigned char* on linux
     if (mincore(mem, len_of_range, (unsigned char *)mincore_array))
         fatal("mincore %s (%s)", path, strerror(errno));
     for (i = 0; i < pages_in_range; ++i)
+    {
         if (is_mincore_page_resident(mincore_array[i]))
             total_pages_in_core++;
-    if (touch)
-      for (i = 0; i < pages_in_range; ++i)
-        junk_counter += ((char*)mem)[i*pagesize]; // <- actually reads each page
+        if (do_touch)
+            junk_counter += ((char*)mem)[i * pagesize]; // <- actually reads each page
+    }
 bail:
     if (mem && munmap(mem, len_of_range))
         warning("unable to munmap file %s (%s)", path, strerror(errno));
@@ -179,7 +179,8 @@ int compare_func(const void *p1, const void *p2)
 static inline void add_object (struct stat *st)
 {
     struct dev_and_inode *newp = (struct dev_and_inode *)malloc(sizeof(struct dev_and_inode));
-    if (newp == NULL) fatal("malloc: out of memory");
+    if (newp == NULL)
+        fatal("malloc: out of memory");
     newp->dev = st->st_dev;
     newp->ino = st->st_ino;
     if (tsearch(newp, &seen_inodes, compare_func) == NULL)
@@ -197,7 +198,7 @@ static inline int find_object(struct stat *st)
     return res != (void *) NULL;
 }
 
-double vmtouch(char *path, bool touch)
+double vmtouch(char *path, bool do_touch)
 {
     struct stat sb;
     DIR *dirp;
@@ -260,14 +261,15 @@ double vmtouch(char *path, bool touch)
             }
             while((de = readdir(dirp)) != NULL)
             {
-                if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) continue;
+                if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
+                    continue;
                 if (snprintf(npath, sizeof(npath), "%s/%s", path, de->d_name) >= sizeof(npath))
                 {
                     warning("path too long %s", path);
                     goto bail;
                 }
                 curr_crawl_depth++;
-                vmtouch(npath, touch);
+                vmtouch(npath, do_touch);
                 curr_crawl_depth--;
             }
 bail:
@@ -283,9 +285,9 @@ bail:
             return 0.0f;
         }
         else if (S_ISREG(sb.st_mode) || S_ISBLK(sb.st_mode))
-            vmtouch_core(path, touch);
+            vmtouch_core(path, do_touch);
         else
             warning("skipping non-regular file: %s", path);
     }
-	return total_pages ? 100.0 * total_pages_in_core / total_pages : 0.0f;
+    return total_pages ? 100.0 * total_pages_in_core / total_pages : 0.0f;
 }
