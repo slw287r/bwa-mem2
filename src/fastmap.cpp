@@ -93,7 +93,7 @@ int is_stdin_empty(void)
             perror("fcntl restore");
             return -1;
         }
-        return 1; // stdin is empty (EOF reached)
+        return 1;
     }
     if (c != EOF)
         ungetc(c, stdin);
@@ -101,9 +101,37 @@ int is_stdin_empty(void)
     if (fcntl(STDIN_FILENO, F_SETFL, flags) == -1)
     {
         perror("fcntl restore");
-        return -1; // Error
+        return -1;
     }
-    return 0; // Data is available
+    return 0;
+}
+
+int is_input_empty(const char* fn)
+{
+    std::string filename = fn;
+    auto is_gzipped = [&]() -> bool {
+        std::ifstream in(filename, std::ios::binary);
+        if (!in) return false;
+        unsigned char magic[2] = {0};
+        in.read(reinterpret_cast<char*>(magic), 2);
+        return in && magic[0] == 0x1F && magic[1] == 0x8B;
+    };
+    if (is_gzipped())
+    {
+        gzFile gz = gzopen(filename.c_str(), "rb");
+        if (!gz) return -1;
+        char buf[8192];
+        int bytes = gzread(gz, buf, sizeof(buf));
+        gzclose(gz);
+        return bytes < 0 ? -1 : (bytes == 0 ? 1 : 0);
+    }
+    else
+    {
+        std::ifstream in(filename, std::ios::binary | std::ios::ate);
+        if (!in) return -1;
+        std::streampos size = in.tellg();
+        return (size == 0) ? 1 : 0;
+    }
 }
 
 int HTStatus()
@@ -1086,8 +1114,14 @@ int main_mem(int argc, char *argv[])
     }
 
     bwa_print_sam_hdr(aux.fmi->idx->bns, hdr_line, aux.fp);
-    if ((!strcmp(argv[optind + 1], "/dev/stdin") || !strcmp(argv[optind + 1], "-")) && is_stdin_empty())
-        goto empty_exit;
+    if (!strcmp(argv[optind + 1], "/dev/stdin") || !strcmp(argv[optind + 1], "-"))
+    {
+        if (is_stdin_empty()) goto empty_exit;
+    }
+    else
+    {
+        if (is_input_empty(argv[optind + 1])) goto empty_exit;
+    }
 
     if (fixed_chunk_size > 0)
         aux.task_size = fixed_chunk_size;
