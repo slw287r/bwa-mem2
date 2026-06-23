@@ -3,7 +3,7 @@
 
 ## About this branch (mmap-izlib)
 
-> **Note**
+> [!NOTE]
 >
 > <a href="https://github.com/bwa-mem2/bwa-mem2/issues/120#issuecomment-821811683">#120</a>
 >
@@ -16,7 +16,7 @@
 > bwa-mem2 mem -z -t8 <ref.fa> <in.fq.gz> > out.sam
 > ```
 
-> **Note**
+> [!NOTE]
 >
 > Using intel's isa-l lib (via the [izlib API](https://github.com/slw287r/izlib)) speed up the aligning process by ~30%  depending on the size of gzipped fastq input.
 
